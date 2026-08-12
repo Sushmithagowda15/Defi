@@ -2,7 +2,14 @@
 pragma solidity ^0.8.28;
 
 interface IERC20 {
+
     function transfer(
+        address to,
+        uint256 amount
+    ) external returns (bool);
+
+    function transferFrom(
+        address from,
         address to,
         uint256 amount
     ) external returns (bool);
@@ -12,8 +19,8 @@ interface IERC20 {
     ) external view returns (uint256);
 
     function mint(
-    address to,
-    uint256 amount
+        address to,
+        uint256 amount
     ) external;
 }
 
@@ -64,6 +71,11 @@ contract LendingPool {
     );
 
     event Borrowed(
+    address indexed borrower,
+    uint256 amount
+    );
+
+    event Repaid(
     address indexed borrower,
     uint256 amount
     );
@@ -169,6 +181,54 @@ contract LendingPool {
      );
 
      emit Borrowed(
+        msg.sender,
+        amount
+     );
+    }
+
+    function repay(
+    uint256 amount
+    ) external {
+
+     require(
+        amount > 0,
+        "Repayment amount must be greater than zero"
+     );
+
+     uint256 borrowedAmount =
+        loans[msg.sender].borrowedAmount;
+
+     require(
+        borrowedAmount > 0,
+        "No active loan"
+     );
+
+     require(
+        amount <= borrowedAmount,
+        "Repayment exceeds borrowed amount"
+     );
+
+     bool success =
+        usdc.transferFrom(
+            msg.sender,
+            address(this),
+            amount
+        );
+
+     require(
+        success,
+        "USDC transfer failed"
+     );
+
+     loans[msg.sender].borrowedAmount -= amount;
+
+     if (
+        loans[msg.sender].borrowedAmount == 0
+     ) {
+        loans[msg.sender].active = false;
+     }
+
+     emit Repaid(
         msg.sender,
         amount
      );

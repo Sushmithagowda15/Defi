@@ -443,4 +443,229 @@ describe("LendingPool", function () {
      );
     });
 
+    it("should allow a user to repay part of their loan", async function () {
+
+     const {
+        ethers,
+        user,
+        lendingPool,
+        mockUSDC
+     } = await deployLendingPool();
+
+     const depositAmount =
+        ethers.parseEther("2");
+
+     await lendingPool
+        .connect(user)
+        .depositCollateral({
+            value: depositAmount
+        });
+
+     const borrowAmount =
+        4000n * 10n ** 6n;
+
+     await lendingPool
+        .connect(user)
+        .borrow(
+            borrowAmount
+        );
+
+     const repayAmount =
+        1000n * 10n ** 6n;
+
+     await mockUSDC
+        .connect(user)
+        .approve(
+            await lendingPool.getAddress(),
+            repayAmount
+        );
+
+     await lendingPool
+        .connect(user)
+        .repay(
+            repayAmount
+        );
+
+     const loan =
+        await lendingPool.loans(
+            user.address
+        );
+
+     expect(loan.borrowedAmount)
+        .to.equal(
+            3000n * 10n ** 6n
+        );
+
+     expect(loan.active)
+        .to.equal(true);
+    });
+
+    it("should allow a user to fully repay their loan", async function () {
+
+     const {
+        ethers,
+        user,
+        lendingPool,
+        mockUSDC
+     } = await deployLendingPool();
+
+     await lendingPool
+        .connect(user)
+        .depositCollateral({
+            value: ethers.parseEther("2")
+        });
+
+     const borrowAmount =
+        4000n * 10n ** 6n;
+
+     await lendingPool
+        .connect(user)
+        .borrow(
+            borrowAmount
+        );
+
+     await mockUSDC
+        .connect(user)
+        .approve(
+            await lendingPool.getAddress(),
+            borrowAmount
+        );
+
+     await lendingPool
+        .connect(user)
+        .repay(
+            borrowAmount
+        );
+
+     const loan =
+        await lendingPool.loans(
+            user.address
+        );
+
+     expect(loan.borrowedAmount)
+        .to.equal(0);
+
+     expect(loan.active)
+        .to.equal(false);
+    });
+
+    it("should reject a zero repayment", async function () {
+
+     const {
+        ethers,
+        user,
+        lendingPool
+     } = await deployLendingPool();
+
+     await lendingPool
+        .connect(user)
+        .depositCollateral({
+            value: ethers.parseEther("2")
+        });
+
+     await expect(
+        lendingPool
+            .connect(user)
+            .repay(0)
+     ).to.be.revertedWith(
+        "Repayment amount must be greater than zero"
+     );
+    });
+
+    it("should reject repayment greater than the borrowed amount", async function () {
+
+     const {
+        ethers,
+        user,
+        lendingPool,
+        mockUSDC
+     } = await deployLendingPool();
+
+     await lendingPool
+        .connect(user)
+        .depositCollateral({
+            value: ethers.parseEther("2")
+        });
+
+     const borrowAmount =
+        4000n * 10n ** 6n;
+
+     await lendingPool
+        .connect(user)
+        .borrow(
+            borrowAmount
+        );
+
+     const excessiveRepayment =
+        5000n * 10n ** 6n;
+
+     await mockUSDC
+        .connect(user)
+        .approve(
+            await lendingPool.getAddress(),
+            excessiveRepayment
+        );
+
+     await expect(
+        lendingPool
+            .connect(user)
+            .repay(
+                excessiveRepayment
+            )
+     ).to.be.revertedWith(
+        "Repayment exceeds borrowed amount"
+     );
+    });
+
+    it("should emit Repaid event", async function () {
+
+     const {
+        ethers,
+        user,
+        lendingPool,
+        mockUSDC
+     } = await deployLendingPool();
+
+     await lendingPool
+        .connect(user)
+        .depositCollateral({
+            value: ethers.parseEther("2")
+        });
+
+     const borrowAmount =
+        4000n * 10n ** 6n;
+
+     await lendingPool
+        .connect(user)
+        .borrow(
+            borrowAmount
+        );
+
+     const repayAmount =
+        1000n * 10n ** 6n;
+
+     await mockUSDC
+        .connect(user)
+        .approve(
+            await lendingPool.getAddress(),
+            repayAmount
+        );
+
+     await expect(
+        lendingPool
+            .connect(user)
+            .repay(
+                repayAmount
+            )
+     )
+        .to.emit(
+            lendingPool,
+            "Repaid"
+        )
+        .withArgs(
+            user.address,
+            repayAmount
+        );
+    });
+
 });
