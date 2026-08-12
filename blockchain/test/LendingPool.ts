@@ -804,4 +804,302 @@ describe("LendingPool", function () {
         );
     });
 
+    it("should calculate a healthy loan health factor", async function () {
+
+     const {
+        ethers,
+        user,
+        lendingPool
+     } = await deployLendingPool();
+
+     await lendingPool
+        .connect(user)
+        .depositCollateral({
+            value: ethers.parseEther("2")
+        });
+
+     const borrowAmount =
+        4000n * 10n ** 6n;
+
+     await lendingPool
+        .connect(user)
+        .borrow(
+            borrowAmount
+        );
+
+     const healthFactor =
+        await lendingPool.getHealthFactor(
+            user.address
+        );
+
+     const expectedHealthFactor =
+        1400000000000000000n;
+
+     expect(healthFactor)
+        .to.equal(
+            expectedHealthFactor
+        );
+    });
+
+    it("should return maximum health factor when there is no debt", async function () {
+
+     const {
+        ethers,
+        user,
+        lendingPool
+     } = await deployLendingPool();
+
+     await lendingPool
+        .connect(user)
+        .depositCollateral({
+            value: ethers.parseEther("2")
+        });
+
+     const healthFactor =
+        await lendingPool.getHealthFactor(
+            user.address
+        );
+
+     expect(healthFactor)
+        .to.equal(
+            ethers.MaxUint256
+        );
+    });
+
+    it("should become unhealthy when the ETH price falls", async function () {
+
+     const {
+        ethers,
+        user,
+        lendingPool,
+        priceFeed
+     } = await deployLendingPool();
+
+     await lendingPool
+        .connect(user)
+        .depositCollateral({
+            value: ethers.parseEther("2")
+        });
+
+     const borrowAmount =
+        5000n * 10n ** 6n;
+
+     await lendingPool
+        .connect(user)
+        .borrow(
+            borrowAmount
+        );
+
+     const healthyFactor =
+        await lendingPool.getHealthFactor(
+            user.address
+        );
+
+     expect(healthyFactor)
+        .to.be.greaterThan(
+            ethers.parseEther("1")
+        );
+
+     const newPrice =
+        3000n * 10n ** 8n;
+
+     await priceFeed.setPrice(
+        newPrice
+     );
+
+     const unhealthyFactor =
+        await lendingPool.getHealthFactor(
+            user.address
+        );
+
+     expect(unhealthyFactor)
+        .to.be.lessThan(
+            ethers.parseEther("1")
+        );
+    });
+
+    it("should reject liquidation of a healthy loan", async function () {
+
+     const {
+        ethers,
+        user,
+        lendingPool
+     } = await deployLendingPool();
+
+     await lendingPool
+        .connect(user)
+        .depositCollateral({
+            value: ethers.parseEther("2")
+        });
+
+     const borrowAmount =
+        4000n * 10n ** 6n;
+
+     await lendingPool
+        .connect(user)
+        .borrow(
+            borrowAmount
+        );
+
+     await expect(
+        lendingPool
+            .connect(user)
+            .liquidate(
+                user.address
+            )
+     ).to.be.revertedWith(
+        "Loan is healthy"
+     );
+    });
+
+    it("should liquidate an unhealthy loan", async function () {
+
+     const {
+        ethers,
+        user,
+        lendingPool,
+        mockUSDC,
+        priceFeed
+     } = await deployLendingPool();
+
+     const [, liquidator] =
+        await ethers.getSigners();
+
+     await lendingPool
+        .connect(user)
+        .depositCollateral({
+            value: ethers.parseEther("2")
+        });
+
+     const borrowAmount =
+        5000n * 10n ** 6n;
+
+     await lendingPool
+        .connect(user)
+        .borrow(
+            borrowAmount
+        );
+
+     // ETH price falls from $4,000 to $3,000
+     await priceFeed.setPrice(
+        3000n * 10n ** 8n
+     );
+
+     const healthFactor =
+        await lendingPool.getHealthFactor(
+            user.address
+        );
+
+     expect(healthFactor)
+        .to.be.lessThan(
+            ethers.parseEther("1")
+        );
+
+     // Give the liquidator enough USDC for the test
+     await mockUSDC.mint(
+        liquidator.address,
+        borrowAmount
+     );
+
+     await mockUSDC
+        .connect(liquidator)
+        .approve(
+            await lendingPool.getAddress(),
+            borrowAmount
+        );
+
+     const liquidatorBalanceBefore =
+        await ethers.provider.getBalance(
+            liquidator.address
+        );
+
+     await lendingPool
+        .connect(liquidator)
+        .liquidate(
+            user.address
+        );
+
+     const loan =
+        await lendingPool.loans(
+            user.address
+        );
+
+     expect(loan.borrowedAmount)
+        .to.equal(0);
+
+     expect(loan.collateralAmount)
+        .to.equal(
+            ethers.parseEther("0.25")
+        );
+
+     expect(loan.active)
+        .to.equal(false);
+    });
+
+    it("should emit Liquidated event", async function () {
+
+     const {
+        ethers,
+        user,
+        lendingPool,
+        mockUSDC,
+        priceFeed
+     } = await deployLendingPool();
+
+     const [, liquidator] =
+        await ethers.getSigners();
+
+     await lendingPool
+        .connect(user)
+        .depositCollateral({
+            value: ethers.parseEther("2")
+        });
+
+     const borrowAmount =
+        5000n * 10n ** 6n;
+
+     await lendingPool
+        .connect(user)
+        .borrow(
+            borrowAmount
+        );
+
+     await priceFeed.setPrice(
+        3000n * 10n ** 8n
+     );
+
+     await mockUSDC.mint(
+        liquidator.address,
+        borrowAmount
+     );
+
+     await mockUSDC
+        .connect(liquidator)
+        .approve(
+            await lendingPool.getAddress(),
+            borrowAmount
+        );
+
+     const collateralSeized =
+        ethers.parseEther("1.75");
+
+     await expect(
+        lendingPool
+            .connect(liquidator)
+            .liquidate(
+                user.address
+            )
+     )
+        .to.emit(
+            lendingPool,
+            "Liquidated"
+        )
+        .withArgs(
+            user.address,
+            liquidator.address,
+            borrowAmount,
+            collateralSeized
+        );
+    });
+
 });
