@@ -1,6 +1,34 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+interface IERC20 {
+    function transfer(
+        address to,
+        uint256 amount
+    ) external returns (bool);
+
+    function balanceOf(
+        address account
+    ) external view returns (uint256);
+
+    function mint(
+    address to,
+    uint256 amount
+    ) external;
+}
+
+interface IPriceFeed {
+    function latestAnswer()
+        external
+        view
+        returns (int256);
+
+    function decimals()
+        external
+        view
+        returns (uint8);
+}
+
 contract LendingPool {
 
     struct Loan {
@@ -11,6 +39,20 @@ contract LendingPool {
     }
 
     mapping(address => Loan) public loans;
+
+    IERC20 public usdc;
+    IPriceFeed public priceFeed;
+
+    uint256 public constant MAX_LTV = 70;
+
+    constructor(
+      address _usdc,
+      address _priceFeed
+    ) {
+      usdc = IERC20(_usdc);
+      priceFeed = IPriceFeed(_priceFeed);
+    }
+
     event CollateralWithdrawn(
       address indexed borrower,
       uint256 amount
@@ -18,7 +60,12 @@ contract LendingPool {
 
     event CollateralDeposited(
          address indexed borrower,
-         uint256 amount
+         uint256 amount 
+    );
+
+    event Borrowed(
+    address indexed borrower,
+    uint256 amount
     );
 
     function depositCollateral() external payable {
@@ -28,6 +75,106 @@ contract LendingPool {
 
       emit CollateralDeposited(msg.sender, msg.value);
     }
+
+    function getCollateralValue(
+      address borrower
+    ) public view returns (uint256) {
+
+     uint256 collateral =
+        loans[borrower].collateralAmount;
+
+     int256 price =
+        priceFeed.latestAnswer();
+
+     require(
+        price > 0,
+        "Invalid price"
+     );
+
+     uint8 priceDecimals =
+        priceFeed.decimals();
+
+     uint256 normalizedPrice;
+
+     if (priceDecimals < 18) {
+
+        normalizedPrice =
+            uint256(price) *
+            10 ** (18 - priceDecimals);
+
+     } else if (priceDecimals > 18) {
+
+        normalizedPrice =
+            uint256(price) /
+            10 ** (priceDecimals - 18);
+
+     } else {
+
+        normalizedPrice =
+            uint256(price);
+     }
+
+     return
+        (collateral * normalizedPrice) /
+        1e18;
+    }
+
+    function getMaxBorrowAmount(
+     address borrower
+    ) public view returns (uint256) {
+
+     uint256 collateralValue =
+        getCollateralValue(borrower);
+
+     uint256 maxBorrowValue =
+        (collateralValue * MAX_LTV) / 100;
+
+     // Convert USD value from 18 decimals
+     // to USDC's 6 decimals.
+     uint256 maxBorrowAmount =
+        maxBorrowValue / 1e12;
+
+     return maxBorrowAmount;
+    }
+
+    function borrow(
+    uint256 amount
+    ) external {
+
+     require(
+        amount > 0,
+        "Borrow amount must be greater than zero"
+     );
+
+     uint256 maxBorrowAmount =
+        getMaxBorrowAmount(msg.sender);
+
+     uint256 currentBorrowed =
+        loans[msg.sender].borrowedAmount;
+
+     require(
+        currentBorrowed + amount <= maxBorrowAmount,
+        "Borrow amount exceeds maximum LTV"
+     );
+
+     loans[msg.sender].borrowedAmount += amount;
+
+     loans[msg.sender].startTime = block.timestamp;
+
+     loans[msg.sender].active = true;
+
+     usdc.mint(
+        msg.sender,
+        amount
+     );
+
+     emit Borrowed(
+        msg.sender,
+        amount
+     );
+    }
+
+   
 
     function withdrawCollateral(uint256 amount) external {
       require(amount > 0, "Withdrawal amount must be greater than zero");
