@@ -89,11 +89,17 @@ contract LendingPool {
     }
 
     function getCollateralValue(
-      address borrower
+    address borrower
     ) public view returns (uint256) {
 
-     uint256 collateral =
-        loans[borrower].collateralAmount;
+     return _getCollateralValue(
+        loans[borrower].collateralAmount
+     );
+    }
+
+    function _getCollateralValue(
+      uint256 collateral
+    ) internal view returns (uint256) {
 
      int256 price =
         priceFeed.latestAnswer();
@@ -234,22 +240,67 @@ contract LendingPool {
      );
     }
 
-   
+    function withdrawCollateral(
+    uint256 amount
+    ) external {
 
-    function withdrawCollateral(uint256 amount) external {
-      require(amount > 0, "Withdrawal amount must be greater than zero");
+     require(
+        amount > 0,
+        "Withdrawal amount must be greater than zero"
+     );
 
-      require(
-        loans[msg.sender].collateralAmount >= amount,
+     uint256 currentCollateral =
+        loans[msg.sender].collateralAmount;
+
+     require(
+        currentCollateral >= amount,
         "Insufficient collateral"
-      );
+     );
 
-      loans[msg.sender].collateralAmount -= amount;
+     uint256 remainingCollateral =
+        currentCollateral - amount;
 
-      (bool success, ) = payable(msg.sender).call{value: amount}("");
+     uint256 borrowedAmount =
+        loans[msg.sender].borrowedAmount;
 
-      require(success, "ETH transfer failed");
+     if (borrowedAmount > 0) {
 
-      emit CollateralWithdrawn(msg.sender, amount);
+        uint256 remainingCollateralValue =
+            _getCollateralValue(
+                remainingCollateral
+            );
+
+        uint256 remainingMaxBorrow =
+            (
+                remainingCollateralValue *
+                MAX_LTV
+            ) / 100;
+
+        remainingMaxBorrow =
+            remainingMaxBorrow / 1e12;
+
+        require(
+            remainingMaxBorrow >= borrowedAmount,
+            "Withdrawal would violate maximum LTV"
+        );
+     }
+
+     loans[msg.sender].collateralAmount =
+        remainingCollateral;
+
+     (bool success, ) =
+        payable(msg.sender).call{
+            value: amount
+        }("");
+
+     require(
+        success,
+        "ETH transfer failed"
+     );
+
+     emit CollateralWithdrawn(
+        msg.sender,
+        amount
+     );
     }
 }
