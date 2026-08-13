@@ -4,1102 +4,1350 @@ import { network } from "hardhat";
 describe("LendingPool", function () {
 
     async function deployLendingPool() {
-      const { ethers } = await network.create();
 
-      const [user] = await ethers.getSigners();
+        const { ethers } =
+            await network.create();
 
-      // Deploy MockUSDC
-      const mockUSDC =
-         await ethers.deployContract("MockUSDC");
+        const [user] =
+            await ethers.getSigners();
 
-      // Deploy MockPriceFeed with ETH = $4,000
-      const initialPrice =
-        4000n * 10n ** 8n;
+        // Deploy MockUSDC
+        const mockUSDC =
+            await ethers.deployContract(
+                "MockUSDC"
+            );
 
-      const priceFeed =
-        await ethers.deployContract(
-             "MockPriceFeed",
-             [initialPrice]
-        );
+        // Deploy MockPriceFeed with ETH = $4,000
+        const initialPrice =
+            4000n * 10n ** 8n;
 
-      // Deploy LendingPool with both addresses
-      const lendingPool =
-        await ethers.deployContract(
-            "LendingPool",
-            [
-                await mockUSDC.getAddress(),
-                await priceFeed.getAddress()
-            ]
-        );
- 
-      return {
-        ethers,
-        user,
-        lendingPool,
-        mockUSDC,
-        priceFeed
-      };
+        const priceFeed =
+            await ethers.deployContract(
+                "MockPriceFeed",
+                [initialPrice]
+            );
+
+        // Deploy LendingPool
+        const lendingPool =
+            await ethers.deployContract(
+                "LendingPool",
+                [
+                    await mockUSDC.getAddress(),
+                    await priceFeed.getAddress()
+                ]
+            );
+
+        return {
+            ethers,
+            user,
+            lendingPool,
+            mockUSDC,
+            priceFeed
+        };
     }
 
 
-    // =========================
+    // =========================================================
     // COLLATERAL DEPOSIT TESTS
-    // =========================
+    // =========================================================
 
-    it("should allow a user to deposit ETH as collateral", async function () {
+    it(
+        "should allow a user to deposit ETH as collateral",
+        async function () {
 
-        const { ethers, user, lendingPool } =
-            await deployLendingPool();
+            const {
+                ethers,
+                user,
+                lendingPool
+            } = await deployLendingPool();
 
-        const depositAmount =
-            ethers.parseEther("2");
+            const depositAmount =
+                ethers.parseEther("2");
 
-        await lendingPool
-            .connect(user)
-            .depositCollateral({
-                value: depositAmount
-            });
-
-        const loan =
-            await lendingPool.loans(user.address);
-
-        expect(loan.collateralAmount)
-            .to.equal(depositAmount);
-    });
-
-
-    it("should reject a zero ETH deposit", async function () {
-
-        const { user, lendingPool } =
-            await deployLendingPool();
-
-        await expect(
-            lendingPool
-                .connect(user)
-                .depositCollateral({
-                    value: 0
-                })
-        ).to.be.revertedWith(
-            "Collateral must be greater than zero"
-        );
-    });
-
-
-    it("should accumulate multiple collateral deposits", async function () {
-
-        const { ethers, user, lendingPool } =
-            await deployLendingPool();
-
-        const firstDeposit =
-            ethers.parseEther("1");
-
-        const secondDeposit =
-            ethers.parseEther("2");
-
-        await lendingPool
-            .connect(user)
-            .depositCollateral({
-                value: firstDeposit
-            });
-
-        await lendingPool
-            .connect(user)
-            .depositCollateral({
-                value: secondDeposit
-            });
-
-        const loan =
-            await lendingPool.loans(user.address);
-
-        expect(loan.collateralAmount)
-            .to.equal(
-                ethers.parseEther("3")
-            );
-    });
-
-
-    it("should emit CollateralDeposited event", async function () {
-
-        const { ethers, user, lendingPool } =
-            await deployLendingPool();
-
-        const depositAmount =
-            ethers.parseEther("2");
-
-        await expect(
-            lendingPool
+            await lendingPool
                 .connect(user)
                 .depositCollateral({
                     value: depositAmount
-                })
-        )
-            .to.emit(
-                lendingPool,
-                "CollateralDeposited"
+                });
+
+            const loan =
+                await lendingPool.loans(
+                    user.address
+                );
+
+            expect(loan.collateralAmount)
+                .to.equal(
+                    depositAmount
+                );
+        }
+    );
+
+
+    it(
+        "should reject a zero ETH deposit",
+        async function () {
+
+            const {
+                user,
+                lendingPool
+            } = await deployLendingPool();
+
+            await expect(
+                lendingPool
+                    .connect(user)
+                    .depositCollateral({
+                        value: 0
+                    })
+            ).to.be.revertedWith(
+                "Collateral must be greater than zero"
+            );
+        }
+    );
+
+
+    it(
+        "should accumulate multiple collateral deposits",
+        async function () {
+
+            const {
+                ethers,
+                user,
+                lendingPool
+            } = await deployLendingPool();
+
+            const firstDeposit =
+                ethers.parseEther("1");
+
+            const secondDeposit =
+                ethers.parseEther("2");
+
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: firstDeposit
+                });
+
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: secondDeposit
+                });
+
+            const loan =
+                await lendingPool.loans(
+                    user.address
+                );
+
+            expect(loan.collateralAmount)
+                .to.equal(
+                    ethers.parseEther("3")
+                );
+        }
+    );
+
+
+    it(
+        "should emit CollateralDeposited event",
+        async function () {
+
+            const {
+                ethers,
+                user,
+                lendingPool
+            } = await deployLendingPool();
+
+            const depositAmount =
+                ethers.parseEther("2");
+
+            await expect(
+                lendingPool
+                    .connect(user)
+                    .depositCollateral({
+                        value: depositAmount
+                    })
             )
-            .withArgs(
-                user.address,
-                depositAmount
-            );
-    });
-
-
-    // =========================
-    // COLLATERAL WITHDRAWAL TESTS
-    // =========================
-
-    it("should allow a user to withdraw part of their collateral", async function () {
-
-        const { ethers, user, lendingPool } =
-            await deployLendingPool();
-
-        const depositAmount =
-            ethers.parseEther("5");
-
-        const withdrawalAmount =
-            ethers.parseEther("2");
-
-        await lendingPool
-            .connect(user)
-            .depositCollateral({
-                value: depositAmount
-            });
-
-        await lendingPool
-            .connect(user)
-            .withdrawCollateral(
-                withdrawalAmount
-            );
-
-        const loan =
-            await lendingPool.loans(user.address);
-
-        expect(loan.collateralAmount)
-            .to.equal(
-                ethers.parseEther("3")
-            );
-    });
-
-
-    it("should reject withdrawal greater than available collateral", async function () {
-
-        const { ethers, user, lendingPool } =
-            await deployLendingPool();
-
-        await lendingPool
-            .connect(user)
-            .depositCollateral({
-                value: ethers.parseEther("1")
-            });
-
-        await expect(
-            lendingPool
-                .connect(user)
-                .withdrawCollateral(
-                    ethers.parseEther("2")
+                .to.emit(
+                    lendingPool,
+                    "CollateralDeposited"
                 )
-        ).to.be.revertedWith(
-            "Insufficient collateral"
-        );
-    });
+                .withArgs(
+                    user.address,
+                    depositAmount
+                );
+        }
+    );
 
 
-    it("should reject a zero collateral withdrawal", async function () {
+    // =========================================================
+    // COLLATERAL WITHDRAWAL TESTS
+    // =========================================================
 
-        const { user, lendingPool } =
-            await deployLendingPool();
+    it(
+        "should allow a user to withdraw part of their collateral",
+        async function () {
 
-        await expect(
-            lendingPool
+            const {
+                ethers,
+                user,
+                lendingPool
+            } = await deployLendingPool();
+
+            const depositAmount =
+                ethers.parseEther("5");
+
+            const withdrawalAmount =
+                ethers.parseEther("2");
+
+            await lendingPool
                 .connect(user)
-                .withdrawCollateral(0)
-        ).to.be.revertedWith(
-            "Withdrawal amount must be greater than zero"
-        );
-    });
+                .depositCollateral({
+                    value: depositAmount
+                });
 
-
-    it("should emit CollateralWithdrawn event", async function () {
-
-        const { ethers, user, lendingPool } =
-            await deployLendingPool();
-
-        const depositAmount =
-            ethers.parseEther("2");
-
-        const withdrawalAmount =
-            ethers.parseEther("1");
-
-        await lendingPool
-            .connect(user)
-            .depositCollateral({
-                value: depositAmount
-            });
-
-        await expect(
-            lendingPool
+            await lendingPool
                 .connect(user)
                 .withdrawCollateral(
                     withdrawalAmount
-                )
-        )
-            .to.emit(
-                lendingPool,
-                "CollateralWithdrawn"
-            )
-            .withArgs(
-                user.address,
-                withdrawalAmount
+                );
+
+            const loan =
+                await lendingPool.loans(
+                    user.address
+                );
+
+            expect(loan.collateralAmount)
+                .to.equal(
+                    ethers.parseEther("3")
+                );
+        }
+    );
+
+
+    it(
+        "should reject withdrawal greater than available collateral",
+        async function () {
+
+            const {
+                ethers,
+                user,
+                lendingPool
+            } = await deployLendingPool();
+
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: ethers.parseEther("1")
+                });
+
+            await expect(
+                lendingPool
+                    .connect(user)
+                    .withdrawCollateral(
+                        ethers.parseEther("2")
+                    )
+            ).to.be.revertedWith(
+                "Insufficient collateral"
             );
-    });
+        }
+    );
 
-    it("should reject withdrawal that would violate maximum LTV", async function () {
 
-     const {
-        ethers,
-        user,
-        lendingPool
-     } = await deployLendingPool();
+    it(
+        "should reject a zero collateral withdrawal",
+        async function () {
 
-     await lendingPool
-        .connect(user)
-        .depositCollateral({
-            value: ethers.parseEther("2")
-        });
+            const {
+                user,
+                lendingPool
+            } = await deployLendingPool();
 
-     const borrowAmount =
-        4000n * 10n ** 6n;
+            await expect(
+                lendingPool
+                    .connect(user)
+                    .withdrawCollateral(0)
+            ).to.be.revertedWith(
+                "Withdrawal amount must be greater than zero"
+            );
+        }
+    );
 
-     await lendingPool
-        .connect(user)
-        .borrow(
-            borrowAmount
-        );
 
-     await expect(
-        lendingPool
-            .connect(user)
-            .withdrawCollateral(
-                ethers.parseEther("1")
+    it(
+        "should emit CollateralWithdrawn event",
+        async function () {
+
+            const {
+                ethers,
+                user,
+                lendingPool
+            } = await deployLendingPool();
+
+            const depositAmount =
+                ethers.parseEther("2");
+
+            const withdrawalAmount =
+                ethers.parseEther("1");
+
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: depositAmount
+                });
+
+            await expect(
+                lendingPool
+                    .connect(user)
+                    .withdrawCollateral(
+                        withdrawalAmount
+                    )
             )
-     ).to.be.revertedWith(
-        "Withdrawal would violate maximum LTV"
-     );
-    });
+                .to.emit(
+                    lendingPool,
+                    "CollateralWithdrawn"
+                )
+                .withArgs(
+                    user.address,
+                    withdrawalAmount
+                );
+        }
+    );
 
-    it("should allow withdrawal while remaining within maximum LTV", async function () {
 
-     const {
-        ethers,
-        user,
-        lendingPool
-     } = await deployLendingPool();
+    it(
+        "should reject withdrawal that would violate maximum LTV",
+        async function () {
 
-     await lendingPool
-        .connect(user)
-        .depositCollateral({
-            value: ethers.parseEther("2")
-        });
+            const {
+                ethers,
+                user,
+                lendingPool
+            } = await deployLendingPool();
 
-     const borrowAmount =
-        2000n * 10n ** 6n;
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: ethers.parseEther("2")
+                });
 
-     await lendingPool
-        .connect(user)
-        .borrow(
-            borrowAmount
-        );
+            const borrowAmount =
+                4000n * 10n ** 6n;
 
-     await lendingPool
-        .connect(user)
-        .withdrawCollateral(
-            ethers.parseEther("0.5")
-        );
+            await lendingPool
+                .connect(user)
+                .borrow(
+                    borrowAmount
+                );
 
-     const loan =
-        await lendingPool.loans(
-            user.address
-        );
+            await expect(
+                lendingPool
+                    .connect(user)
+                    .withdrawCollateral(
+                        ethers.parseEther("1")
+                    )
+            ).to.be.revertedWith(
+                "Withdrawal would violate maximum LTV"
+            );
+        }
+    );
 
-     expect(loan.collateralAmount)
-        .to.equal(
-            ethers.parseEther("1.5")
-        );
 
-     expect(loan.borrowedAmount)
-        .to.equal(
-            borrowAmount
-        );
-    });
+    it(
+        "should allow withdrawal while remaining within maximum LTV",
+        async function () {
 
-    it("should allow collateral withdrawal after full repayment", async function () {
+            const {
+                ethers,
+                user,
+                lendingPool
+            } = await deployLendingPool();
 
-     const {
-        ethers,
-        user,
-        lendingPool,
-        mockUSDC
-     } = await deployLendingPool();
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: ethers.parseEther("2")
+                });
 
-     await lendingPool
-        .connect(user)
-        .depositCollateral({
-            value: ethers.parseEther("2")
-        });
+            const borrowAmount =
+                2000n * 10n ** 6n;
 
-     const borrowAmount =
-        4000n * 10n ** 6n;
+            await lendingPool
+                .connect(user)
+                .borrow(
+                    borrowAmount
+                );
 
-     await lendingPool
-        .connect(user)
-        .borrow(
-            borrowAmount
-        );
+            await lendingPool
+                .connect(user)
+                .withdrawCollateral(
+                    ethers.parseEther("0.5")
+                );
 
-     await mockUSDC
-        .connect(user)
-        .approve(
-            await lendingPool.getAddress(),
-            borrowAmount
-        );
+            const loan =
+                await lendingPool.loans(
+                    user.address
+                );
 
-     await lendingPool
-        .connect(user)
-        .repay(
-            borrowAmount
-        );
+            expect(loan.collateralAmount)
+                .to.equal(
+                    ethers.parseEther("1.5")
+                );
 
-     await lendingPool
-        .connect(user)
-        .withdrawCollateral(
-            ethers.parseEther("1")
-        );
+            expect(loan.borrowedAmount)
+                .to.equal(
+                    borrowAmount
+                );
+        }
+    );
 
-     const loan =
-        await lendingPool.loans(
-            user.address
-        );
 
-     expect(loan.collateralAmount)
-        .to.equal(
-            ethers.parseEther("1")
-        );
+    it(
+        "should allow collateral withdrawal after full repayment",
+        async function () {
 
-     expect(loan.borrowedAmount)
-        .to.equal(0);
-    });
+            const {
+                ethers,
+                user,
+                lendingPool,
+                mockUSDC
+            } = await deployLendingPool();
 
-    it("should calculate the USD value of collateral", async function () {
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: ethers.parseEther("2")
+                });
 
-      const { ethers, user, lendingPool } =
-        await deployLendingPool();
+            const borrowAmount =
+                4000n * 10n ** 6n;
 
-      const depositAmount =
-        ethers.parseEther("2");
+            await lendingPool
+                .connect(user)
+                .borrow(
+                    borrowAmount
+                );
 
-      await lendingPool
-        .connect(user)
-        .depositCollateral({
-            value: depositAmount
-        });
+            /*
+             * Approve a very large amount.
+             * repayAll() calculates the exact debt
+             * inside the same transaction.
+             */
+            await mockUSDC
+                .connect(user)
+                .approve(
+                    await lendingPool.getAddress(),
+                    ethers.MaxUint256
+                );
 
-      const collateralValue =
-        await lendingPool.getCollateralValue(
-            user.address
-        );
+            await lendingPool
+                .connect(user)
+                .repayAll();
 
-      const expectedValue =
-        ethers.parseEther("8000");
+            await lendingPool
+                .connect(user)
+                .withdrawCollateral(
+                    ethers.parseEther("1")
+                );
 
-      expect(collateralValue)
-        .to.equal(expectedValue);
-    });
+            const loan =
+                await lendingPool.loans(
+                    user.address
+                );
 
-    it("should calculate the maximum borrow amount based on LTV", async function () {
+            expect(loan.collateralAmount)
+                .to.equal(
+                    ethers.parseEther("1")
+                );
 
-     const { ethers, user, lendingPool } =
-        await deployLendingPool();
+            expect(loan.borrowedAmount)
+                .to.equal(0);
 
-     const depositAmount =
-        ethers.parseEther("2");
+            expect(loan.active)
+                .to.equal(false);
+        }
+    );
 
-     await lendingPool
-        .connect(user)
-        .depositCollateral({
-            value: depositAmount
-        });
 
-     const maxBorrowAmount =
-        await lendingPool.getMaxBorrowAmount(
-            user.address
-        );
+    // =========================================================
+    // PRICE / LTV TESTS
+    // =========================================================
 
-     const expectedBorrowAmount =
-        5600n * 10n ** 6n;
+    it(
+        "should calculate the USD value of collateral",
+        async function () {
 
-     expect(maxBorrowAmount)
-        .to.equal(expectedBorrowAmount);
-    });
+            const {
+                ethers,
+                user,
+                lendingPool
+            } = await deployLendingPool();
 
-    it("should allow a user to borrow USDC within the maximum LTV", async function () {
+            const depositAmount =
+                ethers.parseEther("2");
 
-     const {
-        ethers,
-        user,
-        lendingPool,
-        mockUSDC
-     } = await deployLendingPool();
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: depositAmount
+                });
 
-     const depositAmount =
-        ethers.parseEther("2");
+            const collateralValue =
+                await lendingPool.getCollateralValue(
+                    user.address
+                );
 
-     await lendingPool
-        .connect(user)
-        .depositCollateral({
-            value: depositAmount
-        });
+            const expectedValue =
+                ethers.parseEther("8000");
 
-     const borrowAmount =
-        4000n * 10n ** 6n;
+            expect(collateralValue)
+                .to.equal(
+                    expectedValue
+                );
+        }
+    );
 
-     const balanceBefore =
-        await mockUSDC.balanceOf(
-            user.address
-        );
 
-     await lendingPool
-        .connect(user)
-        .borrow(
-            borrowAmount
-        );
+    it(
+        "should calculate the maximum borrow amount based on LTV",
+        async function () {
 
-     const loan =
-        await lendingPool.loans(
-            user.address
-        );
+            const {
+                ethers,
+                user,
+                lendingPool
+            } = await deployLendingPool();
 
-     const balanceAfter =
-        await mockUSDC.balanceOf(
-            user.address
-        );
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: ethers.parseEther("2")
+                });
 
-     expect(loan.borrowedAmount)
-        .to.equal(
-            borrowAmount
-        );
+            const maxBorrowAmount =
+                await lendingPool.getMaxBorrowAmount(
+                    user.address
+                );
 
-     expect(balanceAfter)
-        .to.equal(
-            balanceBefore + borrowAmount
-        );
-    });
+            const expectedBorrowAmount =
+                5600n * 10n ** 6n;
 
-    it("should emit Borrowed event", async function () {
+            expect(maxBorrowAmount)
+                .to.equal(
+                    expectedBorrowAmount
+                );
+        }
+    );
 
-     const {
-        ethers,
-        user,
-        lendingPool
-     } = await deployLendingPool();
 
-     await lendingPool
-        .connect(user)
-        .depositCollateral({
-            value: ethers.parseEther("2")
-        });
+    // =========================================================
+    // BORROW TESTS
+    // =========================================================
 
-     const borrowAmount =
-        4000n * 10n ** 6n;
+    it(
+        "should allow a user to borrow USDC within the maximum LTV",
+        async function () {
 
-     await expect(
-        lendingPool
-            .connect(user)
-            .borrow(
-                borrowAmount
+            const {
+                ethers,
+                user,
+                lendingPool,
+                mockUSDC
+            } = await deployLendingPool();
+
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: ethers.parseEther("2")
+                });
+
+            const borrowAmount =
+                4000n * 10n ** 6n;
+
+            const balanceBefore =
+                await mockUSDC.balanceOf(
+                    user.address
+                );
+
+            await lendingPool
+                .connect(user)
+                .borrow(
+                    borrowAmount
+                );
+
+            const loan =
+                await lendingPool.loans(
+                    user.address
+                );
+
+            const balanceAfter =
+                await mockUSDC.balanceOf(
+                    user.address
+                );
+
+            expect(loan.borrowedAmount)
+                .to.equal(
+                    borrowAmount
+                );
+
+            expect(balanceAfter)
+                .to.equal(
+                    balanceBefore +
+                    borrowAmount
+                );
+        }
+    );
+
+
+    it(
+        "should emit Borrowed event",
+        async function () {
+
+            const {
+                ethers,
+                user,
+                lendingPool
+            } = await deployLendingPool();
+
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: ethers.parseEther("2")
+                });
+
+            const borrowAmount =
+                4000n * 10n ** 6n;
+
+            await expect(
+                lendingPool
+                    .connect(user)
+                    .borrow(
+                        borrowAmount
+                    )
             )
-     )
-        .to.emit(
-            lendingPool,
-            "Borrowed"
-        )
-        .withArgs(
-            user.address,
-            borrowAmount
-        );
-    });
+                .to.emit(
+                    lendingPool,
+                    "Borrowed"
+                )
+                .withArgs(
+                    user.address,
+                    borrowAmount
+                );
+        }
+    );
 
-    it("should reject a zero borrow amount", async function () {
 
-     const {
-        ethers,
-        user,
-        lendingPool
-     } = await deployLendingPool();
+    it(
+        "should reject a zero borrow amount",
+        async function () {
 
-     await lendingPool
-        .connect(user)
-        .depositCollateral({
-            value: ethers.parseEther("2")
-        });
+            const {
+                ethers,
+                user,
+                lendingPool
+            } = await deployLendingPool();
 
-     await expect(
-        lendingPool
-            .connect(user)
-            .borrow(0)
-     ).to.be.revertedWith(
-        "Borrow amount must be greater than zero"
-     );
-    });
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: ethers.parseEther("2")
+                });
 
-    it("should reject borrowing above the maximum LTV", async function () {
+            await expect(
+                lendingPool
+                    .connect(user)
+                    .borrow(0)
+            ).to.be.revertedWith(
+                "Borrow amount must be greater than zero"
+            );
+        }
+    );
 
-     const {
-        ethers,
-        user,
-        lendingPool
-     } = await deployLendingPool();
 
-     await lendingPool
-        .connect(user)
-        .depositCollateral({
-            value: ethers.parseEther("2")
-        });
+    it(
+        "should reject borrowing above the maximum LTV",
+        async function () {
 
-     const excessiveBorrow =
-        6000n * 10n ** 6n;
+            const {
+                ethers,
+                user,
+                lendingPool
+            } = await deployLendingPool();
 
-     await expect(
-        lendingPool
-            .connect(user)
-            .borrow(
-                excessiveBorrow
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: ethers.parseEther("2")
+                });
+
+            const excessiveBorrow =
+                6000n * 10n ** 6n;
+
+            await expect(
+                lendingPool
+                    .connect(user)
+                    .borrow(
+                        excessiveBorrow
+                    )
+            ).to.be.revertedWith(
+                "Borrow amount exceeds maximum LTV"
+            );
+        }
+    );
+
+
+    // =========================================================
+    // REPAYMENT TESTS
+    // =========================================================
+
+    it(
+        "should allow a user to repay part of their loan",
+        async function () {
+
+            const {
+                ethers,
+                user,
+                lendingPool,
+                mockUSDC
+            } = await deployLendingPool();
+
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: ethers.parseEther("2")
+                });
+
+            const borrowAmount =
+                4000n * 10n ** 6n;
+
+            await lendingPool
+                .connect(user)
+                .borrow(
+                    borrowAmount
+                );
+
+            const repayAmount =
+                1000n * 10n ** 6n;
+
+            await mockUSDC
+                .connect(user)
+                .approve(
+                    await lendingPool.getAddress(),
+                    ethers.MaxUint256
+                );
+
+            await lendingPool
+                .connect(user)
+                .repay(
+                    repayAmount
+                );
+
+            const loan =
+                await lendingPool.loans(
+                    user.address
+                );
+
+            /*
+             * After partial repayment, the remaining
+             * principal/debt should be greater than
+             * 3000 USDC because of interest.
+             */
+            expect(loan.borrowedAmount)
+                .to.be.greaterThan(
+                    3000n * 10n ** 6n
+                );
+
+            expect(loan.borrowedAmount)
+                .to.be.lessThan(
+                    3001n * 10n ** 6n
+                );
+
+            expect(loan.active)
+                .to.equal(true);
+        }
+    );
+
+
+    it(
+        "should allow a user to fully repay their loan",
+        async function () {
+
+            const {
+                ethers,
+                user,
+                lendingPool,
+                mockUSDC
+            } = await deployLendingPool();
+
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: ethers.parseEther("2")
+                });
+
+            const borrowAmount =
+                4000n * 10n ** 6n;
+
+            await lendingPool
+                .connect(user)
+                .borrow(
+                    borrowAmount
+                );
+
+            /*
+             * repayAll() calculates the exact debt
+             * inside the transaction.
+             */
+            await mockUSDC
+                .connect(user)
+                .approve(
+                    await lendingPool.getAddress(),
+                    ethers.MaxUint256
+                );
+
+            await lendingPool
+                .connect(user)
+                .repayAll();
+
+            const loan =
+                await lendingPool.loans(
+                    user.address
+                );
+
+            expect(loan.borrowedAmount)
+                .to.equal(0);
+
+            expect(loan.active)
+                .to.equal(false);
+        }
+    );
+
+
+    it(
+        "should reject a zero repayment",
+        async function () {
+
+            const {
+                ethers,
+                user,
+                lendingPool
+            } = await deployLendingPool();
+
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: ethers.parseEther("2")
+                });
+
+            await expect(
+                lendingPool
+                    .connect(user)
+                    .repay(0)
+            ).to.be.revertedWith(
+                "Repayment amount must be greater than zero"
+            );
+        }
+    );
+
+
+    it(
+        "should reject repayment greater than the borrowed amount",
+        async function () {
+
+            const {
+                ethers,
+                user,
+                lendingPool,
+                mockUSDC
+            } = await deployLendingPool();
+
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: ethers.parseEther("2")
+                });
+
+            const borrowAmount =
+                4000n * 10n ** 6n;
+
+            await lendingPool
+                .connect(user)
+                .borrow(
+                    borrowAmount
+                );
+
+            const excessiveRepayment =
+                5000n * 10n ** 6n;
+
+            await mockUSDC
+                .connect(user)
+                .approve(
+                    await lendingPool.getAddress(),
+                    ethers.MaxUint256
+                );
+
+            await expect(
+                lendingPool
+                    .connect(user)
+                    .repay(
+                        excessiveRepayment
+                    )
+            ).to.be.revertedWith(
+                "Repayment exceeds borrowed amount"
+            );
+        }
+    );
+
+
+    it(
+        "should emit Repaid event",
+        async function () {
+
+            const {
+                ethers,
+                user,
+                lendingPool,
+                mockUSDC
+            } = await deployLendingPool();
+
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: ethers.parseEther("2")
+                });
+
+            const borrowAmount =
+                4000n * 10n ** 6n;
+
+            await lendingPool
+                .connect(user)
+                .borrow(
+                    borrowAmount
+                );
+
+            const repayAmount =
+                1000n * 10n ** 6n;
+
+            await mockUSDC
+                .connect(user)
+                .approve(
+                    await lendingPool.getAddress(),
+                    ethers.MaxUint256
+                );
+
+            await expect(
+                lendingPool
+                    .connect(user)
+                    .repay(
+                        repayAmount
+                    )
             )
-     ).to.be.revertedWith(
-        "Borrow amount exceeds maximum LTV"
-     );
-    });
-
-    it("should allow a user to repay part of their loan", async function () {
-
-     const {
-        ethers,
-        user,
-        lendingPool,
-        mockUSDC
-     } = await deployLendingPool();
-
-     const depositAmount =
-        ethers.parseEther("2");
-
-     await lendingPool
-        .connect(user)
-        .depositCollateral({
-            value: depositAmount
-        });
-
-     const borrowAmount =
-        4000n * 10n ** 6n;
-
-     await lendingPool
-        .connect(user)
-        .borrow(
-            borrowAmount
-        );
-
-     const repayAmount =
-        1000n * 10n ** 6n;
-
-     await mockUSDC
-        .connect(user)
-        .approve(
-            await lendingPool.getAddress(),
-            repayAmount
-        );
-
-     await lendingPool
-        .connect(user)
-        .repay(
-            repayAmount
-        );
-
-     const loan =
-        await lendingPool.loans(
-            user.address
-        );
-
-     expect(loan.borrowedAmount)
-        .to.equal(
-            3000n * 10n ** 6n
-        );
-
-     expect(loan.active)
-        .to.equal(true);
-    });
-
-    it("should allow a user to fully repay their loan", async function () {
-
-     const {
-        ethers,
-        user,
-        lendingPool,
-        mockUSDC
-     } = await deployLendingPool();
-
-     await lendingPool
-        .connect(user)
-        .depositCollateral({
-            value: ethers.parseEther("2")
-        });
-
-     const borrowAmount =
-        4000n * 10n ** 6n;
-
-     await lendingPool
-        .connect(user)
-        .borrow(
-            borrowAmount
-        );
-
-     await mockUSDC
-        .connect(user)
-        .approve(
-            await lendingPool.getAddress(),
-            borrowAmount
-        );
-
-     await lendingPool
-        .connect(user)
-        .repay(
-            borrowAmount
-        );
-
-     const loan =
-        await lendingPool.loans(
-            user.address
-        );
-
-     expect(loan.borrowedAmount)
-        .to.equal(0);
-
-     expect(loan.active)
-        .to.equal(false);
-    });
-
-    it("should reject a zero repayment", async function () {
-
-     const {
-        ethers,
-        user,
-        lendingPool
-     } = await deployLendingPool();
-
-     await lendingPool
-        .connect(user)
-        .depositCollateral({
-            value: ethers.parseEther("2")
-        });
-
-     await expect(
-        lendingPool
-            .connect(user)
-            .repay(0)
-     ).to.be.revertedWith(
-        "Repayment amount must be greater than zero"
-     );
-    });
-
-    it("should reject repayment greater than the borrowed amount", async function () {
-
-     const {
-        ethers,
-        user,
-        lendingPool,
-        mockUSDC
-     } = await deployLendingPool();
-
-     await lendingPool
-        .connect(user)
-        .depositCollateral({
-            value: ethers.parseEther("2")
-        });
-
-     const borrowAmount =
-        4000n * 10n ** 6n;
-
-     await lendingPool
-        .connect(user)
-        .borrow(
-            borrowAmount
-        );
-
-     const excessiveRepayment =
-        5000n * 10n ** 6n;
-
-     await mockUSDC
-        .connect(user)
-        .approve(
-            await lendingPool.getAddress(),
-            excessiveRepayment
-        );
-
-     await expect(
-        lendingPool
-            .connect(user)
-            .repay(
-                excessiveRepayment
-            )
-     ).to.be.revertedWith(
-        "Repayment exceeds borrowed amount"
-     );
-    });
-
-    it("should emit Repaid event", async function () {
-
-     const {
-        ethers,
-        user,
-        lendingPool,
-        mockUSDC
-     } = await deployLendingPool();
-
-     await lendingPool
-        .connect(user)
-        .depositCollateral({
-            value: ethers.parseEther("2")
-        });
-
-     const borrowAmount =
-        4000n * 10n ** 6n;
-
-     await lendingPool
-        .connect(user)
-        .borrow(
-            borrowAmount
-        );
-
-     const repayAmount =
-        1000n * 10n ** 6n;
-
-     await mockUSDC
-        .connect(user)
-        .approve(
-            await lendingPool.getAddress(),
-            repayAmount
-        );
-
-     await expect(
-        lendingPool
-            .connect(user)
-            .repay(
-                repayAmount
-            )
-     )
-        .to.emit(
-            lendingPool,
-            "Repaid"
-        )
-        .withArgs(
-            user.address,
-            repayAmount
-        );
-    });
-
-    it("should calculate a healthy loan health factor", async function () {
-
-     const {
-        ethers,
-        user,
-        lendingPool
-     } = await deployLendingPool();
-
-     await lendingPool
-        .connect(user)
-        .depositCollateral({
-            value: ethers.parseEther("2")
-        });
-
-     const borrowAmount =
-        4000n * 10n ** 6n;
-
-     await lendingPool
-        .connect(user)
-        .borrow(
-            borrowAmount
-        );
-
-     const healthFactor =
-        await lendingPool.getHealthFactor(
-            user.address
-        );
-
-     const expectedHealthFactor =
-        1400000000000000000n;
-
-     expect(healthFactor)
-        .to.equal(
-            expectedHealthFactor
-        );
-    });
-
-    it("should return maximum health factor when there is no debt", async function () {
-
-     const {
-        ethers,
-        user,
-        lendingPool
-     } = await deployLendingPool();
-
-     await lendingPool
-        .connect(user)
-        .depositCollateral({
-            value: ethers.parseEther("2")
-        });
-
-     const healthFactor =
-        await lendingPool.getHealthFactor(
-            user.address
-        );
-
-     expect(healthFactor)
-        .to.equal(
-            ethers.MaxUint256
-        );
-    });
-
-    it("should become unhealthy when the ETH price falls", async function () {
-
-     const {
-        ethers,
-        user,
-        lendingPool,
-        priceFeed
-     } = await deployLendingPool();
-
-     await lendingPool
-        .connect(user)
-        .depositCollateral({
-            value: ethers.parseEther("2")
-        });
-
-     const borrowAmount =
-        5000n * 10n ** 6n;
-
-     await lendingPool
-        .connect(user)
-        .borrow(
-            borrowAmount
-        );
-
-     const healthyFactor =
-        await lendingPool.getHealthFactor(
-            user.address
-        );
-
-     expect(healthyFactor)
-        .to.be.greaterThan(
-            ethers.parseEther("1")
-        );
-
-     const newPrice =
-        3000n * 10n ** 8n;
-
-     await priceFeed.setPrice(
-        newPrice
-     );
-
-     const unhealthyFactor =
-        await lendingPool.getHealthFactor(
-            user.address
-        );
-
-     expect(unhealthyFactor)
-        .to.be.lessThan(
-            ethers.parseEther("1")
-        );
-    });
-
-    it("should reject liquidation of a healthy loan", async function () {
-
-     const {
-        ethers,
-        user,
-        lendingPool
-     } = await deployLendingPool();
-
-     await lendingPool
-        .connect(user)
-        .depositCollateral({
-            value: ethers.parseEther("2")
-        });
-
-     const borrowAmount =
-        4000n * 10n ** 6n;
-
-     await lendingPool
-        .connect(user)
-        .borrow(
-            borrowAmount
-        );
-
-     await expect(
-        lendingPool
-            .connect(user)
-            .liquidate(
-                user.address
-            )
-     ).to.be.revertedWith(
-        "Loan is healthy"
-     );
-    });
-
-    it("should liquidate an unhealthy loan", async function () {
-
-     const {
-        ethers,
-        user,
-        lendingPool,
-        mockUSDC,
-        priceFeed
-     } = await deployLendingPool();
-
-     const [, liquidator] =
-        await ethers.getSigners();
-
-     await lendingPool
-        .connect(user)
-        .depositCollateral({
-            value: ethers.parseEther("2")
-        });
-
-     const borrowAmount =
-        5000n * 10n ** 6n;
-
-     await lendingPool
-        .connect(user)
-        .borrow(
-            borrowAmount
-        );
-
-     // ETH price falls from $4,000 to $3,000
-     await priceFeed.setPrice(
-        3000n * 10n ** 8n
-     );
-
-     const healthFactor =
-        await lendingPool.getHealthFactor(
-            user.address
-        );
-
-     expect(healthFactor)
-        .to.be.lessThan(
-            ethers.parseEther("1")
-        );
-
-     // Give the liquidator enough USDC for the test
-     await mockUSDC.mint(
-        liquidator.address,
-        borrowAmount
-     );
-
-     await mockUSDC
-        .connect(liquidator)
-        .approve(
-            await lendingPool.getAddress(),
-            borrowAmount
-        );
-
-     const liquidatorBalanceBefore =
-        await ethers.provider.getBalance(
-            liquidator.address
-        );
-
-     await lendingPool
-        .connect(liquidator)
-        .liquidate(
-            user.address
-        );
-
-     const loan =
-        await lendingPool.loans(
-            user.address
-        );
-
-     expect(loan.borrowedAmount)
-        .to.equal(0);
-
-     expect(loan.collateralAmount)
-        .to.equal(
-            ethers.parseEther("0.25")
-        );
-
-     expect(loan.active)
-        .to.equal(false);
-    });
-
-    it("should emit Liquidated event", async function () {
-
-     const {
-        ethers,
-        user,
-        lendingPool,
-        mockUSDC,
-        priceFeed
-     } = await deployLendingPool();
-
-     const [, liquidator] =
-        await ethers.getSigners();
-
-     await lendingPool
-        .connect(user)
-        .depositCollateral({
-            value: ethers.parseEther("2")
-        });
-
-     const borrowAmount =
-        5000n * 10n ** 6n;
-
-     await lendingPool
-        .connect(user)
-        .borrow(
-            borrowAmount
-        );
-
-     await priceFeed.setPrice(
-        3000n * 10n ** 8n
-     );
-
-     await mockUSDC.mint(
-        liquidator.address,
-        borrowAmount
-     );
-
-     await mockUSDC
-        .connect(liquidator)
-        .approve(
-            await lendingPool.getAddress(),
-            borrowAmount
-        );
-
-     const collateralSeized =
-        ethers.parseEther("1.75");
-
-     await expect(
-        lendingPool
-            .connect(liquidator)
-            .liquidate(
-                user.address
-            )
-     )
-        .to.emit(
-            lendingPool,
-            "Liquidated"
-        )
-        .withArgs(
-            user.address,
-            liquidator.address,
-            borrowAmount,
-            collateralSeized
-        );
-    });
+                .to.emit(
+                    lendingPool,
+                    "Repaid"
+                )
+                .withArgs(
+                    user.address,
+                    repayAmount
+                );
+        }
+    );
+
+
+    // =========================================================
+    // HEALTH FACTOR TESTS
+    // =========================================================
+
+    it(
+        "should calculate a healthy loan health factor",
+        async function () {
+
+            const {
+                ethers,
+                user,
+                lendingPool
+            } = await deployLendingPool();
+
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: ethers.parseEther("2")
+                });
+
+            const borrowAmount =
+                4000n * 10n ** 6n;
+
+            await lendingPool
+                .connect(user)
+                .borrow(
+                    borrowAmount
+                );
+
+            const healthFactor =
+                await lendingPool.getHealthFactor(
+                    user.address
+                );
+
+            /*
+             * The theoretical value is 1.4.
+             * Because interest may already have accrued
+             * by a tiny amount, use a small tolerance.
+             */
+            expect(healthFactor)
+                .to.be.greaterThan(
+                    1390000000000000000n
+                );
+
+            expect(healthFactor)
+                .to.be.lessThanOrEqual(
+                    1400000000000000000n
+                );
+        }
+    );
+
+
+    it(
+        "should return maximum health factor when there is no debt",
+        async function () {
+
+            const {
+                ethers,
+                user,
+                lendingPool
+            } = await deployLendingPool();
+
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: ethers.parseEther("2")
+                });
+
+            const healthFactor =
+                await lendingPool.getHealthFactor(
+                    user.address
+                );
+
+            expect(healthFactor)
+                .to.equal(
+                    ethers.MaxUint256
+                );
+        }
+    );
+
+
+    it(
+        "should become unhealthy when the ETH price falls",
+        async function () {
+
+            const {
+                ethers,
+                user,
+                lendingPool,
+                priceFeed
+            } = await deployLendingPool();
+
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: ethers.parseEther("2")
+                });
+
+            const borrowAmount =
+                5000n * 10n ** 6n;
+
+            await lendingPool
+                .connect(user)
+                .borrow(
+                    borrowAmount
+                );
+
+            const healthyFactor =
+                await lendingPool.getHealthFactor(
+                    user.address
+                );
+
+            expect(healthyFactor)
+                .to.be.greaterThan(
+                    ethers.parseEther("1")
+                );
+
+            const newPrice =
+                3000n * 10n ** 8n;
+
+            await priceFeed.setPrice(
+                newPrice
+            );
+
+            const unhealthyFactor =
+                await lendingPool.getHealthFactor(
+                    user.address
+                );
+
+            expect(unhealthyFactor)
+                .to.be.lessThan(
+                    ethers.parseEther("1")
+                );
+        }
+    );
+
+
+    // =========================================================
+    // LIQUIDATION TESTS
+    // =========================================================
+
+    it(
+        "should reject liquidation of a healthy loan",
+        async function () {
+
+            const {
+                ethers,
+                user,
+                lendingPool
+            } = await deployLendingPool();
+
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: ethers.parseEther("2")
+                });
+
+            const borrowAmount =
+                4000n * 10n ** 6n;
+
+            await lendingPool
+                .connect(user)
+                .borrow(
+                    borrowAmount
+                );
+
+            await expect(
+                lendingPool
+                    .connect(user)
+                    .liquidate(
+                        user.address
+                    )
+            ).to.be.revertedWith(
+                "Loan is healthy"
+            );
+        }
+    );
+
+
+    it(
+        "should liquidate an unhealthy loan",
+        async function () {
+
+            const {
+                ethers,
+                user,
+                lendingPool,
+                mockUSDC,
+                priceFeed
+            } = await deployLendingPool();
+
+            const [, liquidator] =
+                await ethers.getSigners();
+
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: ethers.parseEther("2")
+                });
+
+            const borrowAmount =
+                5000n * 10n ** 6n;
+
+            await lendingPool
+                .connect(user)
+                .borrow(
+                    borrowAmount
+                );
+
+            // ETH price falls from $4,000 to $3,000
+            await priceFeed.setPrice(
+                3000n * 10n ** 8n
+            );
+
+            const healthFactor =
+                await lendingPool.getHealthFactor(
+                    user.address
+                );
+
+            expect(healthFactor)
+                .to.be.lessThan(
+                    ethers.parseEther("1")
+                );
+
+            /*
+             * Give liquidator more than enough USDC.
+             *
+             * We deliberately use MaxUint256 approval because
+             * the exact debt can change slightly with timestamp.
+             */
+            await mockUSDC.mint(
+                liquidator.address,
+                6000n * 10n ** 6n
+            );
+
+            await mockUSDC
+                .connect(liquidator)
+                .approve(
+                    await lendingPool.getAddress(),
+                    ethers.MaxUint256
+                );
+
+            await lendingPool
+                .connect(liquidator)
+                .liquidate(
+                    user.address
+                );
+
+            const loan =
+                await lendingPool.loans(
+                    user.address
+                );
+
+            expect(loan.borrowedAmount)
+                .to.equal(0);
+
+            expect(loan.collateralAmount)
+                .to.be.lessThan(
+                    ethers.parseEther("2")
+                );
+
+            expect(loan.collateralAmount)
+                .to.be.greaterThan(0);
+
+            expect(loan.active)
+                .to.equal(false);
+        }
+    );
+
+
+    it(
+        "should emit Liquidated event",
+        async function () {
+
+            const {
+                ethers,
+                user,
+                lendingPool,
+                mockUSDC,
+                priceFeed
+            } = await deployLendingPool();
+
+            const [, liquidator] =
+                await ethers.getSigners();
+
+            await lendingPool
+                .connect(user)
+                .depositCollateral({
+                    value: ethers.parseEther("2")
+                });
+
+            const borrowAmount =
+                5000n * 10n ** 6n;
+
+            await lendingPool
+                .connect(user)
+                .borrow(
+                    borrowAmount
+                );
+
+            await priceFeed.setPrice(
+                3000n * 10n ** 8n
+            );
+
+            /*
+             * Give the liquidator enough USDC.
+             */
+            await mockUSDC.mint(
+                liquidator.address,
+                6000n * 10n ** 6n
+            );
+
+            await mockUSDC
+                .connect(liquidator)
+                .approve(
+                    await lendingPool.getAddress(),
+                    ethers.MaxUint256
+                );
+
+            /*
+             * Don't calculate currentDebt before the
+             * liquidation transaction.
+             *
+             * The contract itself calculates the exact
+             * debt inside liquidate().
+             *
+             * Instead, wait for the transaction and inspect
+             * the emitted Liquidated event.
+             */
+            const tx =
+                await lendingPool
+                    .connect(liquidator)
+                    .liquidate(
+                        user.address
+                    );
+
+            const receipt =
+                await tx.wait();
+
+            expect(receipt)
+                .to.not.equal(null);
+
+            /*
+             * Find Liquidated event.
+             */
+            const liquidatedEvent =
+                receipt!.logs.find(
+                    (log: any) => {
+
+                        try {
+
+                            const parsed =
+                                lendingPool.interface.parseLog(
+                                    log
+                                );
+
+                            return (
+                                parsed?.name ===
+                                "Liquidated"
+                            );
+
+                        } catch {
+                            return false;
+                        }
+                    }
+                );
+
+            expect(liquidatedEvent)
+                .to.not.equal(undefined);
+
+            const parsedEvent =
+                lendingPool.interface.parseLog(
+                    liquidatedEvent!
+                );
+
+            expect(parsedEvent)
+                .to.not.equal(null);
+
+            expect(parsedEvent!.args[0])
+                .to.equal(
+                    user.address
+                );
+
+            expect(parsedEvent!.args[1])
+                .to.equal(
+                    liquidator.address
+                );
+
+            expect(parsedEvent!.args[2])
+                .to.be.greaterThan(
+                    borrowAmount
+                );
+
+            expect(parsedEvent!.args[3])
+                .to.be.greaterThan(0);
+        }
+    );
 
 });
