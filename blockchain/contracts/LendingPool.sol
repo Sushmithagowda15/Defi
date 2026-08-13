@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 interface IERC20 {
 
@@ -37,7 +38,7 @@ interface IPriceFeed {
         returns (uint8);
 }
 
-contract LendingPool {
+contract LendingPool is ReentrancyGuard {
 
     struct Loan {
         uint256 collateralAmount;
@@ -128,7 +129,7 @@ contract LendingPool {
 
     function withdrawCollateral(
         uint256 amount
-    ) external {
+    ) external nonReentrant {
 
         require(
             amount > 0,
@@ -523,7 +524,7 @@ contract LendingPool {
 
     function liquidate(
         address borrower
-    ) external {
+    ) external nonReentrant {
 
         require(
             borrower != address(0),

@@ -1350,4 +1350,43 @@ describe("LendingPool", function () {
         }
     );
 
+    it(
+       "should block a reentrancy attack during collateral withdrawal",
+       async function () {
+
+             const {
+                ethers,
+                user,
+                lendingPool
+            } = await deployLendingPool();
+
+            const attacker =
+                await ethers.deployContract(
+                  "ReentrantAttacker",
+                  [
+                    await lendingPool.getAddress()
+                  ]
+                );
+
+            const depositAmount =
+                ethers.parseEther("2");
+
+            // Deposit ETH through attacker contract
+            await attacker
+                .connect(user)
+                .deposit({
+                    value: depositAmount
+                });
+
+            // Try to withdraw through attacker contract
+            await expect(
+                attacker
+                    .connect(user)
+                    .attack(
+                      ethers.parseEther("1")
+                    )
+            ).to.be.revert(ethers);
+        }
+    );
+
 });
