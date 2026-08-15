@@ -2634,3 +2634,796 @@ textarea:focus-visible {
   }
 
 }
+/* =========================================================
+   BORROW PAGE
+   ========================================================= */
+
+.borrow-page {
+  width: 100%;
+}
+
+
+/* =========================================================
+   PAGE HEADER
+   ========================================================= */
+
+.borrow-page .page-header {
+  margin-bottom: 38px;
+}
+
+.borrow-page .page-header h1 {
+  margin-bottom: 14px;
+}
+
+
+/* =========================================================
+   MAIN LAYOUT
+   ========================================================= */
+
+.borrow-layout {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1.45fr)
+    minmax(320px, 0.75fr);
+
+  gap: 20px;
+
+  align-items: start;
+}
+
+
+/* =========================================================
+   MAIN BORROW PANEL
+   ========================================================= */
+
+.borrow-panel {
+  padding: 28px;
+
+  border: 1px solid #242c41;
+
+  border-radius: 16px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(16, 22, 35, 0.98),
+      rgba(10, 15, 25, 0.98)
+    );
+}
+
+
+/* =========================================================
+   PANEL HEADER
+   ========================================================= */
+
+.borrow-panel-header {
+  display: flex;
+
+  align-items: flex-start;
+
+  justify-content: space-between;
+
+  gap: 20px;
+
+  padding-bottom: 24px;
+
+  border-bottom: 1px solid #20283a;
+}
+
+.borrow-panel-header h2 {
+  margin: 5px 0 7px;
+
+  color: #edf0f7;
+
+  font-size: 20px;
+
+  line-height: 1.4;
+}
+
+.borrow-panel-header p:last-child {
+  margin: 0;
+
+  color: #68758e;
+
+  font-size: 12px;
+
+  line-height: 1.6;
+}
+
+.borrow-asset-icon {
+  width: 48px;
+  height: 48px;
+
+  flex-shrink: 0;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(101, 84, 242, 0.25);
+
+  border-radius: 12px;
+
+  background: rgba(101, 84, 242, 0.1);
+
+  color: #968aff;
+
+  font-size: 22px;
+}
+
+
+/* =========================================================
+   COLLATERAL
+   ========================================================= */
+
+.collateral-box {
+  margin-top: 24px;
+
+  padding: 18px;
+
+  border: 1px solid #20283a;
+
+  border-radius: 11px;
+
+  background: #0b111c;
+}
+
+.collateral-header {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  margin-bottom: 14px;
+}
+
+.collateral-header span {
+  color: #69758c;
+
+  font-size: 12px;
+}
+
+.collateral-header strong {
+  color: #e8ebf4;
+
+  font-size: 14px;
+}
+
+
+/* =========================================================
+   COLLATERAL BAR
+   ========================================================= */
+
+.collateral-bar {
+  width: 100%;
+  height: 6px;
+
+  overflow: hidden;
+
+  border-radius: 10px;
+
+  background: #20283a;
+}
+
+.collateral-bar-fill {
+  width: 0%;
+  height: 100%;
+
+  border-radius: inherit;
+
+  background: #6659e8;
+}
+
+.collateral-footer {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  margin-top: 11px;
+}
+
+.collateral-footer span {
+  color: #58657d;
+
+  font-size: 10px;
+}
+
+.collateral-footer strong {
+  color: #9ca6ba;
+
+  font-size: 11px;
+}
+
+
+/* =========================================================
+   BORROW AMOUNT
+   ========================================================= */
+
+.borrow-amount-section {
+  margin-top: 24px;
+}
+
+.borrow-label-row {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  margin-bottom: 9px;
+}
+
+.borrow-label-row label {
+  color: #b7bfd0;
+
+  font-size: 12px;
+
+  font-weight: 600;
+}
+
+.borrow-label-row span {
+  color: #5f6c84;
+
+  font-size: 11px;
+}
+
+
+/* =========================================================
+   BORROW INPUT
+   ========================================================= */
+
+.borrow-input {
+  display: flex;
+
+  align-items: center;
+
+  min-height: 62px;
+
+  padding: 6px 7px 6px 17px;
+
+  border: 1px solid #293247;
+
+  border-radius: 11px;
+
+  background: #090f19;
+
+  transition: border-color 0.2s ease;
+}
+
+.borrow-input:focus-within {
+  border-color: #5e54cf;
+}
+
+.borrow-input input {
+  width: 100%;
+
+  min-width: 0;
+
+  border: none;
+
+  outline: none;
+
+  background: transparent;
+
+  color: #edf0f7;
+
+  font-size: 22px;
+
+  font-weight: 600;
+}
+
+.borrow-input input::placeholder {
+  color: #3d475b;
+}
+
+.borrow-input input::-webkit-inner-spin-button,
+.borrow-input input::-webkit-outer-spin-button {
+  margin: 0;
+
+  appearance: none;
+}
+
+
+/* =========================================================
+   ASSET SELECTOR
+   ========================================================= */
+
+.borrow-asset-selector {
+  height: 46px;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+  flex-shrink: 0;
+
+  padding: 0 13px;
+
+  border: 1px solid #293247;
+
+  border-radius: 9px;
+
+  background: #141b2a;
+
+  color: #dce1ec;
+
+  font-size: 12px;
+
+  font-weight: 650;
+
+  cursor: pointer;
+}
+
+.borrow-asset-selector > span:first-child {
+  color: #968aff;
+
+  font-size: 16px;
+}
+
+.borrow-selector-arrow {
+  margin-left: 3px;
+
+  color: #68758e;
+}
+
+
+/* =========================================================
+   BORROW INFORMATION
+   ========================================================= */
+
+.borrow-info-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  gap: 10px;
+
+  margin-top: 18px;
+}
+
+.borrow-info-card {
+  padding: 15px;
+
+  border: 1px solid #20283a;
+
+  border-radius: 10px;
+
+  background: rgba(11, 17, 28, 0.75);
+}
+
+.borrow-info-card span {
+  display: block;
+
+  margin-bottom: 7px;
+
+  color: #66738b;
+
+  font-size: 10px;
+
+  line-height: 1.5;
+}
+
+.borrow-info-card strong {
+  color: #e4e8f1;
+
+  font-size: 14px;
+
+  line-height: 1.4;
+}
+
+
+/* =========================================================
+   HEALTH FACTOR
+   ========================================================= */
+
+.health-factor-box {
+  display: flex;
+
+  align-items: center;
+
+  gap: 14px;
+
+  margin-top: 18px;
+
+  padding: 16px;
+
+  border: 1px solid #20283a;
+
+  border-radius: 11px;
+
+  background: #0b111c;
+}
+
+.health-factor-icon {
+  width: 38px;
+  height: 38px;
+
+  flex-shrink: 0;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 9px;
+
+  background: rgba(101, 84, 242, 0.1);
+
+  color: #9185fb;
+
+  font-size: 15px;
+}
+
+.health-factor-content {
+  width: 100%;
+}
+
+.health-factor-heading {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  margin-bottom: 8px;
+}
+
+.health-factor-heading span {
+  color: #68758c;
+
+  font-size: 11px;
+}
+
+.health-factor-heading strong {
+  color: #e5e9f2;
+
+  font-size: 13px;
+}
+
+.health-factor-bar {
+  width: 100%;
+  height: 5px;
+
+  overflow: hidden;
+
+  border-radius: 10px;
+
+  background: #20283a;
+}
+
+.health-factor-fill {
+  width: 0%;
+  height: 100%;
+
+  background: #6659e8;
+}
+
+.health-factor-content p {
+  margin: 8px 0 0;
+
+  color: #59667e;
+
+  font-size: 9px;
+
+  line-height: 1.6;
+}
+
+
+/* =========================================================
+   SUBMIT BUTTON
+   ========================================================= */
+
+.borrow-submit-btn {
+  width: 100%;
+
+  height: 48px;
+
+  margin-top: 22px;
+
+  border: none;
+
+  border-radius: 10px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #6659e8,
+      #5145c8
+    );
+
+  color: white;
+
+  font-size: 13px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.borrow-submit-btn:hover {
+  transform: translateY(-1px);
+
+  opacity: 0.92;
+}
+
+.borrow-note {
+  margin: 12px 0 0;
+
+  color: #515e75;
+
+  font-size: 10px;
+
+  line-height: 1.6;
+
+  text-align: center;
+}
+
+
+/* =========================================================
+   RIGHT SIDE
+   ========================================================= */
+
+.borrow-side {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 18px;
+}
+
+
+/* =========================================================
+   SIDE PANEL
+   ========================================================= */
+
+.borrow-side-panel {
+  padding: 23px;
+
+  border: 1px solid #242c41;
+
+  border-radius: 15px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(16, 22, 35, 0.96),
+      rgba(10, 15, 25, 0.96)
+    );
+}
+
+.borrow-position-status {
+  padding: 5px 8px;
+
+  border: 1px solid #293247;
+
+  border-radius: 6px;
+
+  color: #626f86;
+
+  font-size: 8px;
+
+  font-weight: 800;
+
+  white-space: nowrap;
+
+  letter-spacing: 0.8px;
+}
+
+
+/* =========================================================
+   BORROW POSITION
+   ========================================================= */
+
+.borrow-position {
+  padding-top: 7px;
+}
+
+.borrow-position-row {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  min-height: 46px;
+
+  border-bottom: 1px solid #1b2231;
+}
+
+.borrow-position-row:last-child {
+  border-bottom: none;
+}
+
+.borrow-position-row span {
+  color: #69758c;
+
+  font-size: 11px;
+}
+
+.borrow-position-row strong {
+  color: #e5e9f2;
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   BORROWING STEPS
+   ========================================================= */
+
+.borrowing-steps {
+  padding-top: 19px;
+}
+
+.borrowing-step {
+  display: grid;
+
+  grid-template-columns: 35px minmax(0, 1fr);
+
+  gap: 12px;
+
+  padding-bottom: 18px;
+}
+
+.borrowing-step:last-child {
+  padding-bottom: 0;
+}
+
+.borrow-step-number {
+  width: 32px;
+  height: 32px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid #2a3246;
+
+  border-radius: 8px;
+
+  background: #101725;
+
+  color: #8276ef;
+
+  font-size: 9px;
+
+  font-weight: 800;
+}
+
+.borrowing-step strong {
+  display: block;
+
+  margin: 1px 0 4px;
+
+  color: #dfe3ed;
+
+  font-size: 12px;
+
+  line-height: 1.5;
+}
+
+.borrowing-step p {
+  margin: 0;
+
+  color: #626f86;
+
+  font-size: 10px;
+
+  line-height: 1.6;
+}
+
+
+/* =========================================================
+   WARNING
+   ========================================================= */
+
+.borrow-warning {
+  display: flex;
+
+  align-items: center;
+
+  gap: 14px;
+
+  margin-top: 20px;
+
+  padding: 17px 20px;
+
+  border: 1px solid #332d3a;
+
+  border-radius: 12px;
+
+  background: #110f18;
+}
+
+.borrow-warning-icon {
+  width: 35px;
+  height: 35px;
+
+  flex-shrink: 0;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid #3b3343;
+
+  border-radius: 9px;
+
+  color: #b69bce;
+
+  font-size: 13px;
+
+  font-weight: 800;
+}
+
+.borrow-warning strong {
+  display: block;
+
+  margin-bottom: 3px;
+
+  color: #d9d0df;
+
+  font-size: 11px;
+}
+
+.borrow-warning p {
+  margin: 0;
+
+  color: #746b7e;
+
+  font-size: 10px;
+
+  line-height: 1.6;
+}
+
+
+/* =========================================================
+   BORROW RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 950px) {
+
+  .borrow-layout {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+
+@media (max-width: 650px) {
+
+  .borrow-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .borrow-panel {
+    padding: 20px;
+  }
+
+  .borrow-input {
+    min-height: 56px;
+  }
+
+  .borrow-input input {
+    font-size: 19px;
+  }
+
+  .borrow-warning {
+    align-items: flex-start;
+  }
+
+}
