@@ -1,26 +1,42 @@
+import { NavLink, Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
+
+import Dashboard from './pages/Dashboard'
+import Lend from './pages/Lend'
+import Borrow from './pages/Borrow'
+import Repay from './pages/Repay'
+import RiskAnalysis from './pages/RiskAnalysis'
+import Transactions from './pages/Transactions'
 
 function App() {
   return (
     <div className="app">
 
-      {/* Top Navigation */}
+      {/* ================================
+          TOP NAVIGATION
+          ================================ */}
+
       <header className="topbar">
 
         <div className="brand">
-          <div className="brand-icon">◆</div>
 
-          <div>
+          <div className="brand-icon">
+            ◆
+          </div>
+
+          <div className="brand-text">
             <h2>DeFiLend</h2>
             <span>ETH Lending Protocol</span>
           </div>
+
         </div>
+
 
         <div className="topbar-right">
 
           <div className="network">
             <span className="network-dot"></span>
-            Ethereum
+            <span>Ethereum</span>
           </div>
 
           <button className="wallet-btn">
@@ -32,81 +48,163 @@ function App() {
       </header>
 
 
+      {/* ================================
+          MAIN LAYOUT
+          ================================ */}
+
       <div className="layout">
 
-        {/* Sidebar */}
+
+        {/* ================================
+            SIDEBAR
+            ================================ */}
+
         <aside className="sidebar">
 
+
+          {/* OVERVIEW */}
+
           <div className="menu-section">
 
-            <p className="menu-title">OVERVIEW</p>
+            <p className="menu-title">
+              OVERVIEW
+            </p>
 
-            <button className="menu-item active">
-              <span>⌂</span>
-              Dashboard
-            </button>
 
-            <button className="menu-item">
-              <span>◈</span>
-              Markets
-            </button>
+            <NavLink
+              to="/dashboard"
+              className={({ isActive }) =>
+                `menu-item ${isActive ? 'active' : ''}`
+              }
+            >
+              <span className="menu-icon">⌂</span>
+              <span className="menu-label">Dashboard</span>
+            </NavLink>
 
-            <button className="menu-item">
-              <span>◉</span>
-              Portfolio
-            </button>
+
+            <NavLink
+              to="/markets"
+              className={({ isActive }) =>
+                `menu-item ${isActive ? 'active' : ''}`
+              }
+            >
+              <span className="menu-icon">◈</span>
+              <span className="menu-label">Markets</span>
+            </NavLink>
+
+
+            <NavLink
+              to="/portfolio"
+              className={({ isActive }) =>
+                `menu-item ${isActive ? 'active' : ''}`
+              }
+            >
+              <span className="menu-icon">◉</span>
+              <span className="menu-label">Portfolio</span>
+            </NavLink>
 
           </div>
 
 
+          {/* LENDING */}
+
           <div className="menu-section">
 
-            <p className="menu-title">LENDING</p>
+            <p className="menu-title">
+              LENDING
+            </p>
 
-            <button className="menu-item">
-              <span>↗</span>
-              Lend
-            </button>
 
-            <button className="menu-item">
-              <span>↙</span>
-              Borrow
-            </button>
+            <NavLink
+              to="/lend"
+              className={({ isActive }) =>
+                `menu-item ${isActive ? 'active' : ''}`
+              }
+            >
+              <span className="menu-icon">↗</span>
+              <span className="menu-label">Lend</span>
+            </NavLink>
 
-            <button className="menu-item">
-              <span>↻</span>
-              Repay
-            </button>
+
+            <NavLink
+              to="/borrow"
+              className={({ isActive }) =>
+                `menu-item ${isActive ? 'active' : ''}`
+              }
+            >
+              <span className="menu-icon">↙</span>
+              <span className="menu-label">Borrow</span>
+            </NavLink>
+
+
+            <NavLink
+              to="/repay"
+              className={({ isActive }) =>
+                `menu-item ${isActive ? 'active' : ''}`
+              }
+            >
+              <span className="menu-icon">↻</span>
+              <span className="menu-label">Repay</span>
+            </NavLink>
 
           </div>
 
 
+          {/* ANALYTICS */}
+
           <div className="menu-section">
 
-            <p className="menu-title">ANALYTICS</p>
+            <p className="menu-title">
+              ANALYTICS
+            </p>
 
-            <button className="menu-item">
-              <span>◒</span>
-              Risk Analysis
-            </button>
 
-            <button className="menu-item">
-              <span>≡</span>
-              Transactions
-            </button>
+            <NavLink
+              to="/risk-analysis"
+              className={({ isActive }) =>
+                `menu-item ${isActive ? 'active' : ''}`
+              }
+            >
+              <span className="menu-icon">◒</span>
+              <span className="menu-label">Risk Analysis</span>
+            </NavLink>
+
+
+            <NavLink
+              to="/transactions"
+              className={({ isActive }) =>
+                `menu-item ${isActive ? 'active' : ''}`
+              }
+            >
+              <span className="menu-icon">≡</span>
+              <span className="menu-label">Transactions</span>
+            </NavLink>
 
           </div>
 
+
+          {/* ================================
+              SIDEBAR STATUS
+              ================================ */}
 
           <div className="sidebar-bottom">
 
             <div className="protocol-status">
+
               <span className="status-dot"></span>
 
-              <div>
-                <strong>Protocol Online</strong>
-                <small>All systems operational</small>
+              <div className="protocol-info">
+
+                <strong>
+                  Protocol Online
+                </strong>
+
+                <small>
+                  All systems operational
+                </small>
+
               </div>
+
             </div>
 
           </div>
@@ -114,260 +212,131 @@ function App() {
         </aside>
 
 
-        {/* Main Content */}
+        {/* ================================
+            PAGE CONTENT
+            ================================ */}
+
         <main className="main-content">
 
-          <div className="page-heading">
+          <div className="page-shell">
 
-            <div>
-              <p className="eyebrow">OVERVIEW</p>
+            <Routes>
 
-              <h1>Dashboard</h1>
+              {/* DEFAULT ROUTE */}
 
-              <p className="subtitle">
-                Manage your ETH collateral and lending position.
-              </p>
-            </div>
+              <Route
+                path="/"
+                element={
+                  <Navigate
+                    to="/dashboard"
+                    replace
+                  />
+                }
+              />
 
-            <div className="eth-price">
-              <span>ETH PRICE</span>
-              <strong>$4,320.24</strong>
-              <small>+2.84%</small>
-            </div>
+
+              {/* DASHBOARD */}
+
+              <Route
+                path="/dashboard"
+                element={<Dashboard />}
+              />
+
+
+              {/* LEND */}
+
+              <Route
+                path="/lend"
+                element={<Lend />}
+              />
+
+
+              {/* BORROW */}
+
+              <Route
+                path="/borrow"
+                element={<Borrow />}
+              />
+
+
+              {/* REPAY */}
+
+              <Route
+                path="/repay"
+                element={<Repay />}
+              />
+
+
+              {/* RISK ANALYSIS */}
+
+              <Route
+                path="/risk-analysis"
+                element={<RiskAnalysis />}
+              />
+
+
+              {/* TRANSACTIONS */}
+
+              <Route
+                path="/transactions"
+                element={<Transactions />}
+              />
+
+
+              {/* MARKETS */}
+
+              <Route
+                path="/markets"
+                element={
+
+                  <div className="page-placeholder">
+
+                    <p className="eyebrow">
+                      OVERVIEW
+                    </p>
+
+                    <h1>
+                      Markets
+                    </h1>
+
+                    <p className="subtitle">
+                      Lending markets will appear here.
+                    </p>
+
+                  </div>
+
+                }
+              />
+
+
+              {/* PORTFOLIO */}
+
+              <Route
+                path="/portfolio"
+                element={
+
+                  <div className="page-placeholder">
+
+                    <p className="eyebrow">
+                      OVERVIEW
+                    </p>
+
+                    <h1>
+                      Portfolio
+                    </h1>
+
+                    <p className="subtitle">
+                      Your portfolio will appear here.
+                    </p>
+
+                  </div>
+
+                }
+              />
+
+            </Routes>
 
           </div>
-
-
-          {/* Statistics */}
-          <section className="stats-grid">
-
-            <div className="stat-card">
-              <div className="stat-header">
-                <span>Total Collateral</span>
-                <div className="stat-icon">◆</div>
-              </div>
-
-              <h2>-- ETH</h2>
-
-              <p>Connect wallet to view</p>
-            </div>
-
-
-            <div className="stat-card">
-              <div className="stat-header">
-                <span>Borrowed</span>
-                <div className="stat-icon">↗</div>
-              </div>
-
-              <h2>--</h2>
-
-              <p>Current borrowed amount</p>
-            </div>
-
-
-            <div className="stat-card">
-              <div className="stat-header">
-                <span>Health Factor</span>
-                <div className="stat-icon safe">✓</div>
-              </div>
-
-              <h2>--</h2>
-
-              <p>Position health</p>
-            </div>
-
-
-            <div className="stat-card">
-              <div className="stat-header">
-                <span>Risk Level</span>
-                <div className="stat-icon safe">●</div>
-              </div>
-
-              <h2>--</h2>
-
-              <p>AI risk assessment</p>
-            </div>
-
-          </section>
-
-
-          {/* Main Dashboard Grid */}
-          <section className="dashboard-grid">
-
-
-            {/* Position */}
-            <div className="panel position-panel">
-
-              <div className="panel-heading">
-
-                <div>
-                  <p className="eyebrow">YOUR POSITION</p>
-                  <h2>Collateral Overview</h2>
-                </div>
-
-                <button className="outline-btn">
-                  Manage
-                </button>
-
-              </div>
-
-
-              <div className="position-value">
-
-                <div className="eth-symbol">Ξ</div>
-
-                <div>
-                  <span>Total Collateral</span>
-                  <strong>-- ETH</strong>
-                </div>
-
-              </div>
-
-
-              <div className="position-details">
-
-                <div>
-                  <span>Collateral Value</span>
-                  <strong>--</strong>
-                </div>
-
-                <div>
-                  <span>Borrowing Power</span>
-                  <strong>--</strong>
-                </div>
-
-                <div>
-                  <span>Available to Borrow</span>
-                  <strong>--</strong>
-                </div>
-
-              </div>
-
-            </div>
-
-
-            {/* Quick Actions */}
-            <div className="panel actions-panel">
-
-              <div className="panel-heading">
-
-                <div>
-                  <p className="eyebrow">QUICK ACTIONS</p>
-                  <h2>Manage Assets</h2>
-                </div>
-
-              </div>
-
-
-              <button className="action-btn primary">
-                <span>↗</span>
-
-                <div>
-                  <strong>Deposit ETH</strong>
-                  <small>Add ETH as collateral</small>
-                </div>
-
-                <b>→</b>
-              </button>
-
-
-              <button className="action-btn">
-                <span>↙</span>
-
-                <div>
-                  <strong>Borrow</strong>
-                  <small>Borrow against collateral</small>
-                </div>
-
-                <b>→</b>
-              </button>
-
-
-              <button className="action-btn">
-                <span>↻</span>
-
-                <div>
-                  <strong>Repay</strong>
-                  <small>Repay your borrowed assets</small>
-                </div>
-
-                <b>→</b>
-              </button>
-
-            </div>
-
-          </section>
-
-
-          {/* Risk Section */}
-          <section className="panel risk-panel">
-
-            <div className="panel-heading">
-
-              <div>
-                <p className="eyebrow">INTELLIGENT RISK ANALYSIS</p>
-
-                <h2>Position Risk</h2>
-              </div>
-
-              <span className="powered">
-                Powered by ML
-              </span>
-
-            </div>
-
-
-            <div className="risk-content">
-
-              <div className="risk-score">
-
-                <div className="score-circle">
-                  <span>--</span>
-                  <small>Risk Score</small>
-                </div>
-
-              </div>
-
-
-              <div className="risk-info">
-
-                <h3>Connect your wallet</h3>
-
-                <p>
-                  Your collateral, borrowing activity and market
-                  conditions will be analyzed to estimate your
-                  lending risk.
-                </p>
-
-                <button className="wallet-btn">
-                  Connect Wallet
-                </button>
-
-              </div>
-
-
-              <div className="risk-indicators">
-
-                <div>
-                  <span>Collateral Ratio</span>
-                  <strong>--</strong>
-                </div>
-
-                <div>
-                  <span>Liquidation Threshold</span>
-                  <strong>--</strong>
-                </div>
-
-                <div>
-                  <span>Health Factor</span>
-                  <strong>--</strong>
-                </div>
-
-              </div>
-
-            </div>
-
-          </section>
 
         </main>
 
