@@ -8,6 +8,7 @@ import Repay from './pages/Repay'
 import RiskAnalysis from './pages/RiskAnalysis'
 import Transactions from './pages/Transactions'
 import Markets from './pages/Markets'
+import Portfolio from './pages/Portfolio'
 
 function App() {
   return (
@@ -297,25 +298,7 @@ function App() {
 
               <Route
                 path="/portfolio"
-                element={
-
-                  <div className="page-placeholder">
-
-                    <p className="eyebrow">
-                      OVERVIEW
-                    </p>
-
-                    <h1>
-                      Portfolio
-                    </h1>
-
-                    <p className="subtitle">
-                      Your portfolio will appear here.
-                    </p>
-
-                  </div>
-
-                }
+                element={<Portfolio />}
               />
 
 
