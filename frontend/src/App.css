@@ -1269,3 +1269,701 @@ textarea:focus-visible {
 
   outline-offset: 3px;
 }
+/* =========================================================
+   DASHBOARD
+   ========================================================= */
+
+.dashboard-page {
+  width: 100%;
+}
+
+
+/* =========================================================
+   PAGE HEADER
+   ========================================================= */
+
+.dashboard-page .page-header {
+  margin-bottom: 42px;
+}
+
+.dashboard-page .page-header h1 {
+  margin-bottom: 14px;
+}
+
+
+/* =========================================================
+   DASHBOARD SECTION
+   ========================================================= */
+
+.dashboard-section {
+  margin-bottom: 34px;
+}
+
+
+/* =========================================================
+   SECTION HEADING
+   ========================================================= */
+
+.section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+
+  margin-bottom: 18px;
+}
+
+.section-heading h2 {
+  margin: 0 0 6px;
+
+  font-size: 21px;
+
+  line-height: 1.35;
+}
+
+.section-heading p {
+  margin: 0;
+
+  color: #697692;
+
+  font-size: 13px;
+
+  line-height: 1.6;
+}
+
+
+/* =========================================================
+   STATISTICS GRID
+   ========================================================= */
+
+.stats-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 16px;
+}
+
+
+/* =========================================================
+   DASHBOARD CARD
+   ========================================================= */
+
+.dashboard-card {
+  min-height: 166px;
+
+  padding: 22px;
+
+  border: 1px solid #242c41;
+
+  border-radius: 15px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(16, 22, 35, 0.96),
+      rgba(10, 15, 25, 0.96)
+    );
+
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-2px);
+
+  border-color: #343e57;
+}
+
+
+/* =========================================================
+   CARD TOP
+   ========================================================= */
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 22px;
+}
+
+.card-label {
+  color: #7c88a1;
+
+  font-size: 13px;
+
+  font-weight: 600;
+
+  line-height: 1.5;
+
+  letter-spacing: 0.3px;
+}
+
+.card-icon {
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(111, 92, 255, 0.2);
+
+  border-radius: 9px;
+
+  background: rgba(99, 83, 240, 0.09);
+
+  color: #9589ff;
+
+  font-size: 16px;
+}
+
+
+/* =========================================================
+   CARD VALUE
+   ========================================================= */
+
+.dashboard-card h3 {
+  margin: 0 0 7px;
+
+  color: #f3f5fb;
+
+  font-size: 25px;
+
+  font-weight: 700;
+
+  line-height: 1.3;
+
+  letter-spacing: -0.3px;
+}
+
+.card-description {
+  margin: 0;
+
+  color: #59667f;
+
+  font-size: 12px;
+
+  line-height: 1.5;
+}
+
+
+/* =========================================================
+   TWO COLUMN SECTION
+   ========================================================= */
+
+.dashboard-two-column {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 18px;
+}
+
+
+/* =========================================================
+   DASHBOARD PANEL
+   ========================================================= */
+
+.dashboard-panel {
+  min-height: 315px;
+
+  padding: 25px;
+
+  border: 1px solid #242c41;
+
+  border-radius: 15px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(16, 22, 35, 0.96),
+      rgba(10, 15, 25, 0.96)
+    );
+}
+
+
+/* =========================================================
+   PANEL HEADER
+   ========================================================= */
+
+.panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  padding-bottom: 20px;
+
+  border-bottom: 1px solid #20283a;
+}
+
+.panel-header h2 {
+  margin: 4px 0 0;
+
+  font-size: 19px;
+
+  line-height: 1.4;
+}
+
+.panel-eyebrow {
+  margin: 0;
+
+  color: #7566ee;
+
+  font-size: 10px;
+
+  font-weight: 800;
+
+  line-height: 1.5;
+
+  letter-spacing: 1.6px;
+}
+
+
+/* =========================================================
+   BADGES
+   ========================================================= */
+
+.status-badge {
+  padding: 6px 10px;
+
+  border: 1px solid #293248;
+
+  border-radius: 7px;
+
+  background: #101622;
+
+  color: #77849d;
+
+  font-size: 10px;
+
+  font-weight: 700;
+
+  white-space: nowrap;
+
+  letter-spacing: 0.5px;
+}
+
+.powered-badge {
+  padding: 6px 9px;
+
+  border: 1px solid rgba(101, 84, 242, 0.25);
+
+  border-radius: 7px;
+
+  background: rgba(101, 84, 242, 0.08);
+
+  color: #9589ff;
+
+  font-size: 9px;
+
+  font-weight: 800;
+
+  white-space: nowrap;
+
+  letter-spacing: 0.8px;
+}
+
+
+/* =========================================================
+   POSITION DETAILS
+   ========================================================= */
+
+.position-details {
+  padding-top: 9px;
+}
+
+.detail-row {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  min-height: 48px;
+
+  border-bottom: 1px solid #1b2231;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-row span {
+  color: #68758e;
+
+  font-size: 13px;
+
+  line-height: 1.5;
+
+  letter-spacing: 0.2px;
+}
+
+.detail-row strong {
+  color: #e8ebf4;
+
+  font-size: 14px;
+
+  font-weight: 650;
+
+  line-height: 1.5;
+}
+
+
+/* =========================================================
+   RISK SUMMARY
+   ========================================================= */
+
+.risk-summary {
+  display: flex;
+
+  align-items: center;
+
+  gap: 28px;
+
+  padding-top: 28px;
+}
+
+.risk-circle {
+  width: 112px;
+  height: 112px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid #2a3246;
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle,
+      #121927 57%,
+      transparent 58%
+    ),
+    conic-gradient(
+      #635bff 0deg,
+      #635bff 80deg,
+      #222a3b 80deg
+    );
+}
+
+.risk-circle span {
+  color: #e9ecf5;
+
+  font-size: 25px;
+
+  font-weight: 750;
+
+  line-height: 1.2;
+}
+
+.risk-circle small {
+  margin-top: 3px;
+
+  color: #68758c;
+
+  font-size: 9px;
+
+  line-height: 1.4;
+}
+
+.risk-info {
+  min-width: 0;
+}
+
+.risk-info h3 {
+  margin: 0 0 9px;
+
+  color: #e9ecf5;
+
+  font-size: 15px;
+
+  line-height: 1.5;
+}
+
+.risk-info p {
+  margin: 0 0 17px;
+
+  color: #69758d;
+
+  font-size: 12px;
+
+  line-height: 1.7;
+}
+
+
+/* =========================================================
+   SECONDARY BUTTON
+   ========================================================= */
+
+.secondary-btn {
+  min-height: 40px;
+
+  padding: 0 15px;
+
+  border: 1px solid #2b344a;
+
+  border-radius: 9px;
+
+  background: #101622;
+
+  color: #a7b0c4;
+
+  font-size: 12px;
+
+  font-weight: 650;
+
+  cursor: pointer;
+
+  transition: 0.2s ease;
+}
+
+.secondary-btn:hover {
+  border-color: #6254dc;
+
+  color: #eeeaff;
+
+  background: rgba(98, 84, 220, 0.08);
+}
+
+
+/* =========================================================
+   QUICK ACTIONS
+   ========================================================= */
+
+.quick-actions {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  gap: 14px;
+}
+
+.quick-action {
+  min-height: 78px;
+
+  display: grid;
+
+  grid-template-columns: 40px minmax(0, 1fr) 20px;
+
+  align-items: center;
+
+  column-gap: 13px;
+
+  padding: 16px;
+
+  border: 1px solid #242c41;
+
+  border-radius: 13px;
+
+  background: #0c121e;
+
+  color: #e8ebf4;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+.quick-action:hover {
+  transform: translateY(-2px);
+
+  border-color: #3a4258;
+
+  background: #101623;
+}
+
+.quick-action-icon {
+  width: 40px;
+  height: 40px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+
+  background: rgba(99, 83, 240, 0.1);
+
+  color: #968aff;
+
+  font-size: 18px;
+}
+
+.quick-action strong {
+  display: block;
+
+  margin-bottom: 3px;
+
+  color: #e7eaf3;
+
+  font-size: 13px;
+
+  line-height: 1.4;
+}
+
+.quick-action small {
+  display: block;
+
+  color: #65728a;
+
+  font-size: 11px;
+
+  line-height: 1.5;
+}
+
+.quick-action .arrow {
+  color: #5e6a82;
+
+  font-size: 16px;
+
+  text-align: right;
+}
+
+
+/* =========================================================
+   PROTOCOL BANNER
+   ========================================================= */
+
+.protocol-banner {
+  min-height: 92px;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 17px;
+
+  padding: 20px 23px;
+
+  border: 1px solid #242c41;
+
+  border-radius: 14px;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(18, 24, 38, 0.95),
+      rgba(11, 16, 27, 0.95)
+    );
+}
+
+.protocol-banner-icon {
+  width: 42px;
+  height: 42px;
+
+  flex-shrink: 0;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+
+  background: rgba(99, 83, 240, 0.1);
+
+  color: #968aff;
+}
+
+.protocol-banner h3 {
+  margin: 0 0 5px;
+
+  color: #e8ebf4;
+
+  font-size: 14px;
+
+  line-height: 1.4;
+}
+
+.protocol-banner p {
+  margin: 0;
+
+  color: #65728a;
+
+  font-size: 11px;
+
+  line-height: 1.6;
+}
+
+.online-badge {
+  margin-left: auto;
+
+  padding: 6px 9px;
+
+  color: #39d9a7;
+
+  font-size: 10px;
+
+  font-weight: 700;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   DASHBOARD RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1100px) {
+
+  .stats-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .quick-actions {
+    grid-template-columns:
+      1fr;
+  }
+
+}
+
+
+@media (max-width: 800px) {
+
+  .dashboard-two-column {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+
+@media (max-width: 600px) {
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .risk-summary {
+    flex-direction: column;
+
+    align-items: flex-start;
+  }
+
+  .protocol-banner {
+    align-items: flex-start;
+  }
+
+  .online-badge {
+    display: none;
+  }
+
+}
