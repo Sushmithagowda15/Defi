@@ -7,6 +7,7 @@ import Borrow from './pages/Borrow'
 import Repay from './pages/Repay'
 import RiskAnalysis from './pages/RiskAnalysis'
 import Transactions from './pages/Transactions'
+import Markets from './pages/Markets'
 
 function App() {
   return (
@@ -222,6 +223,7 @@ function App() {
 
             <Routes>
 
+
               {/* DEFAULT ROUTE */}
 
               <Route
@@ -287,25 +289,7 @@ function App() {
 
               <Route
                 path="/markets"
-                element={
-
-                  <div className="page-placeholder">
-
-                    <p className="eyebrow">
-                      OVERVIEW
-                    </p>
-
-                    <h1>
-                      Markets
-                    </h1>
-
-                    <p className="subtitle">
-                      Lending markets will appear here.
-                    </p>
-
-                  </div>
-
-                }
+                element={<Markets />}
               />
 
 
@@ -333,6 +317,7 @@ function App() {
 
                 }
               />
+
 
             </Routes>
 
