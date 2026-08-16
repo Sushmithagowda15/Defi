@@ -1,8 +1,12 @@
+import { useNavigate } from 'react-router-dom'
+
 function Dashboard() {
+  const navigate = useNavigate()
+
   return (
     <div className="dashboard-page">
 
-      {/* Page Header */}
+      {/* PAGE HEADER */}
       <div className="page-header">
         <p className="eyebrow">OVERVIEW</p>
 
@@ -14,20 +18,23 @@ function Dashboard() {
       </div>
 
 
-      {/* Portfolio Summary */}
+      {/* PORTFOLIO OVERVIEW */}
       <section className="dashboard-section">
 
         <div className="section-heading">
           <div>
             <h2>Portfolio Overview</h2>
-            <p>Your current DeFi lending position.</p>
+
+            <p>
+              Your current DeFi lending position.
+            </p>
           </div>
         </div>
 
 
         <div className="stats-grid">
 
-          {/* ETH Balance */}
+          {/* ETH BALANCE */}
           <div className="dashboard-card">
 
             <div className="card-top">
@@ -49,7 +56,7 @@ function Dashboard() {
           </div>
 
 
-          {/* Supplied */}
+          {/* SUPPLIED */}
           <div className="dashboard-card">
 
             <div className="card-top">
@@ -71,7 +78,7 @@ function Dashboard() {
           </div>
 
 
-          {/* Borrowed */}
+          {/* BORROWED */}
           <div className="dashboard-card">
 
             <div className="card-top">
@@ -93,7 +100,7 @@ function Dashboard() {
           </div>
 
 
-          {/* Health Factor */}
+          {/* HEALTH FACTOR */}
           <div className="dashboard-card">
 
             <div className="card-top">
@@ -119,13 +126,12 @@ function Dashboard() {
       </section>
 
 
-      {/* Position + Risk */}
+      {/* POSITION + RISK */}
       <section className="dashboard-section">
 
         <div className="dashboard-two-column">
 
-
-          {/* Position */}
+          {/* POSITION */}
           <div className="dashboard-panel">
 
             <div className="panel-header">
@@ -172,7 +178,7 @@ function Dashboard() {
           </div>
 
 
-          {/* Risk */}
+          {/* RISK */}
           <div className="dashboard-panel">
 
             <div className="panel-header">
@@ -202,14 +208,20 @@ function Dashboard() {
 
               <div className="risk-info">
 
-                <h3>Risk analysis unavailable</h3>
+                <h3>
+                  Risk analysis unavailable
+                </h3>
 
                 <p>
                   Connect your wallet and create a lending
                   position to receive your risk assessment.
                 </p>
 
-                <button className="secondary-btn">
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={() => navigate('/risk-analysis')}
+                >
                   View Risk Analysis
                 </button>
 
@@ -224,7 +236,7 @@ function Dashboard() {
       </section>
 
 
-      {/* Quick Actions */}
+      {/* QUICK ACTIONS */}
       <section className="dashboard-section">
 
         <div className="section-heading">
@@ -242,51 +254,81 @@ function Dashboard() {
 
         <div className="quick-actions">
 
-          <button className="quick-action">
+          {/* LEND */}
+          <button
+            type="button"
+            className="quick-action"
+            onClick={() => navigate('/lend')}
+          >
+
             <span className="quick-action-icon">
               ↗
             </span>
 
             <span>
               <strong>Lend ETH</strong>
-              <small>Supply ETH and earn returns</small>
+
+              <small>
+                Supply ETH and earn returns
+              </small>
             </span>
 
             <span className="arrow">
               →
             </span>
+
           </button>
 
 
-          <button className="quick-action">
+          {/* BORROW */}
+          <button
+            type="button"
+            className="quick-action"
+            onClick={() => navigate('/borrow')}
+          >
+
             <span className="quick-action-icon">
               ↙
             </span>
 
             <span>
               <strong>Borrow</strong>
-              <small>Borrow assets against collateral</small>
+
+              <small>
+                Borrow assets against collateral
+              </small>
             </span>
 
             <span className="arrow">
               →
             </span>
+
           </button>
 
 
-          <button className="quick-action">
+          {/* REPAY */}
+          <button
+            type="button"
+            className="quick-action"
+            onClick={() => navigate('/repay')}
+          >
+
             <span className="quick-action-icon">
               ↻
             </span>
 
             <span>
               <strong>Repay</strong>
-              <small>Manage your outstanding debt</small>
+
+              <small>
+                Manage your outstanding debt
+              </small>
             </span>
 
             <span className="arrow">
               →
             </span>
+
           </button>
 
         </div>
@@ -294,7 +336,7 @@ function Dashboard() {
       </section>
 
 
-      {/* Protocol Information */}
+      {/* PROTOCOL INFORMATION */}
       <section className="dashboard-section">
 
         <div className="protocol-banner">
@@ -305,7 +347,9 @@ function Dashboard() {
 
           <div>
 
-            <h3>DeFiLend Protocol</h3>
+            <h3>
+              DeFiLend Protocol
+            </h3>
 
             <p>
               Decentralized ETH lending powered by blockchain,

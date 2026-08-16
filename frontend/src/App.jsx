@@ -1,5 +1,8 @@
+import { useState } from 'react'
 import { NavLink, Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
+
+import { connectWallet } from './utils/wallet'
 
 import Dashboard from './pages/Dashboard'
 import Lend from './pages/Lend'
@@ -11,6 +14,22 @@ import Markets from './pages/Markets'
 import Portfolio from './pages/Portfolio'
 
 function App() {
+  const [walletAddress, setWalletAddress] = useState('')
+  const [walletError, setWalletError] = useState('')
+
+  const handleConnectWallet = async () => {
+    try {
+      setWalletError('')
+
+      const wallet = await connectWallet()
+
+      setWalletAddress(wallet.address)
+    } catch (error) {
+      console.error(error)
+      setWalletError(error.message)
+    }
+  }
+
   return (
     <div className="app">
 
@@ -33,7 +52,6 @@ function App() {
 
         </div>
 
-
         <div className="topbar-right">
 
           <div className="network">
@@ -41,14 +59,24 @@ function App() {
             <span>Ethereum</span>
           </div>
 
-          <button className="wallet-btn">
-            Connect Wallet
+          <button
+            className="wallet-btn"
+            onClick={handleConnectWallet}
+          >
+            {walletAddress
+              ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+              : 'Connect Wallet'}
           </button>
+
+          {walletError && (
+            <span className="wallet-error">
+              {walletError}
+            </span>
+          )}
 
         </div>
 
       </header>
-
 
       {/* ================================
           MAIN LAYOUT
@@ -56,13 +84,11 @@ function App() {
 
       <div className="layout">
 
-
         {/* ================================
             SIDEBAR
             ================================ */}
 
         <aside className="sidebar">
-
 
           {/* OVERVIEW */}
 
@@ -71,7 +97,6 @@ function App() {
             <p className="menu-title">
               OVERVIEW
             </p>
-
 
             <NavLink
               to="/dashboard"
@@ -83,7 +108,6 @@ function App() {
               <span className="menu-label">Dashboard</span>
             </NavLink>
 
-
             <NavLink
               to="/markets"
               className={({ isActive }) =>
@@ -93,7 +117,6 @@ function App() {
               <span className="menu-icon">◈</span>
               <span className="menu-label">Markets</span>
             </NavLink>
-
 
             <NavLink
               to="/portfolio"
@@ -107,7 +130,6 @@ function App() {
 
           </div>
 
-
           {/* LENDING */}
 
           <div className="menu-section">
@@ -115,7 +137,6 @@ function App() {
             <p className="menu-title">
               LENDING
             </p>
-
 
             <NavLink
               to="/lend"
@@ -127,7 +148,6 @@ function App() {
               <span className="menu-label">Lend</span>
             </NavLink>
 
-
             <NavLink
               to="/borrow"
               className={({ isActive }) =>
@@ -137,7 +157,6 @@ function App() {
               <span className="menu-icon">↙</span>
               <span className="menu-label">Borrow</span>
             </NavLink>
-
 
             <NavLink
               to="/repay"
@@ -151,7 +170,6 @@ function App() {
 
           </div>
 
-
           {/* ANALYTICS */}
 
           <div className="menu-section">
@@ -159,7 +177,6 @@ function App() {
             <p className="menu-title">
               ANALYTICS
             </p>
-
 
             <NavLink
               to="/risk-analysis"
@@ -170,7 +187,6 @@ function App() {
               <span className="menu-icon">◒</span>
               <span className="menu-label">Risk Analysis</span>
             </NavLink>
-
 
             <NavLink
               to="/transactions"
@@ -184,10 +200,7 @@ function App() {
 
           </div>
 
-
-          {/* ================================
-              SIDEBAR STATUS
-              ================================ */}
+          {/* SIDEBAR STATUS */}
 
           <div className="sidebar-bottom">
 
@@ -213,7 +226,6 @@ function App() {
 
         </aside>
 
-
         {/* ================================
             PAGE CONTENT
             ================================ */}
@@ -223,7 +235,6 @@ function App() {
           <div className="page-shell">
 
             <Routes>
-
 
               {/* DEFAULT ROUTE */}
 
@@ -237,14 +248,12 @@ function App() {
                 }
               />
 
-
               {/* DASHBOARD */}
 
               <Route
                 path="/dashboard"
                 element={<Dashboard />}
               />
-
 
               {/* LEND */}
 
@@ -253,14 +262,12 @@ function App() {
                 element={<Lend />}
               />
 
-
               {/* BORROW */}
 
               <Route
                 path="/borrow"
                 element={<Borrow />}
               />
-
 
               {/* REPAY */}
 
@@ -269,14 +276,12 @@ function App() {
                 element={<Repay />}
               />
 
-
               {/* RISK ANALYSIS */}
 
               <Route
                 path="/risk-analysis"
                 element={<RiskAnalysis />}
               />
-
 
               {/* TRANSACTIONS */}
 
@@ -285,7 +290,6 @@ function App() {
                 element={<Transactions />}
               />
 
-
               {/* MARKETS */}
 
               <Route
@@ -293,14 +297,12 @@ function App() {
                 element={<Markets />}
               />
 
-
               {/* PORTFOLIO */}
 
               <Route
                 path="/portfolio"
                 element={<Portfolio />}
               />
-
 
             </Routes>
 
