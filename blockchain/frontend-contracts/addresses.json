@@ -1,8 +1,8 @@
 {
-  "network": "default",
-  "chainId": "31337",
-  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-  "MockUSDC": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-  "MockPriceFeed": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
-  "LendingPool": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
+  "network": "sepolia",
+  "chainId": "11155111",
+  "deployer": "0xF0239bB1d9d10D52405d9dbab2847cE34216724e",
+  "MockUSDC": "0xe8338267995038016bA6826806A9FC4c566A1429",
+  "MockPriceFeed": "0xe28467F6E6Dad62FEd4893c071c15F0948b55E2a",
+  "LendingPool": "0xf49D97Eb1fa32aFA40A9d8Bf717E258573bF76F0"
 }
