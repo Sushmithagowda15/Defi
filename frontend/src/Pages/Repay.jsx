@@ -1,38 +1,256 @@
+import { useState } from 'react'
+import { BrowserProvider, Contract, formatEther } from 'ethers'
+
+import { connectWallet } from '../utils/wallet'
+import {
+  LENDING_POOL_ADDRESS,
+  LENDING_POOL_ABI,
+} from '../utils/contracts'
+
 function Repay() {
+  const [walletAddress, setWalletAddress] = useState('')
+
+  const [collateral, setCollateral] = useState('0')
+  const [borrowed, setBorrowed] = useState('0')
+  const [active, setActive] = useState(false)
+
+  const [repayAmount, setRepayAmount] = useState('')
+
+  const [walletError, setWalletError] = useState('')
+  const [statusMessage, setStatusMessage] = useState('')
+
+  const loadRepayData = async (address) => {
+    try {
+      if (!window.ethereum || !address) {
+        return
+      }
+
+      const provider = new BrowserProvider(window.ethereum)
+
+      const lendingPool = new Contract(
+        LENDING_POOL_ADDRESS,
+        LENDING_POOL_ABI,
+        provider
+      )
+
+      // Read user's loan from LendingPool
+      const loan = await lendingPool.loans(address)
+
+      const collateralAmount = formatEther(
+        loan.collateralAmount
+      )
+
+      const borrowedAmount = formatEther(
+        loan.borrowedAmount
+      )
+
+      setCollateral(collateralAmount)
+      setBorrowed(borrowedAmount)
+      setActive(loan.active)
+
+      console.log('Repay data:')
+      console.log('Collateral:', collateralAmount)
+      console.log('Borrowed:', borrowedAmount)
+      console.log('Active:', loan.active)
+
+    } catch (error) {
+      console.error(
+        'Failed to load repayment data:',
+        error
+      )
+
+      setWalletError(
+        'Failed to load your borrowing position.'
+      )
+    }
+  }
+
+  // Connect wallet
+  const handleConnectWallet = async () => {
+    try {
+      setWalletError('')
+      setStatusMessage('')
+
+      const wallet = await connectWallet()
+
+      setWalletAddress(wallet.address)
+
+      await loadRepayData(wallet.address)
+
+      setStatusMessage(
+        'Repayment data loaded successfully.'
+      )
+
+    } catch (error) {
+      console.error(error)
+
+      setWalletError(
+        error?.message ||
+        'Failed to connect wallet.'
+      )
+    }
+  }
+
+  // Handle repayment input
+  const handleRepayAmountChange = (event) => {
+    const value = event.target.value
+
+    if (value === '') {
+      setRepayAmount('')
+      return
+    }
+
+    if (Number(value) < 0) {
+      return
+    }
+
+    setRepayAmount(value)
+  }
+
+  // Percentage repayment shortcuts
+  const handlePercentage = (percentage) => {
+    if (!walletAddress) {
+      setWalletError('Please connect your wallet first.')
+      return
+    }
+
+    const debt = Number(borrowed)
+
+    if (debt <= 0) {
+      setWalletError('You do not have any outstanding debt.')
+      return
+    }
+
+    const amount = debt * percentage
+
+    setRepayAmount(amount.toFixed(6))
+    setWalletError('')
+  }
+
+  // MAX repayment
+  const handleMaxRepay = () => {
+    if (!walletAddress) {
+      setWalletError('Please connect your wallet first.')
+      return
+    }
+
+    if (Number(borrowed) <= 0) {
+      setWalletError('You do not have any outstanding debt.')
+      return
+    }
+
+    setRepayAmount(Number(borrowed).toFixed(6))
+    setWalletError('')
+  }
+
+  // Calculate remaining debt
+  const repaymentNumber =
+    Number(repayAmount) || 0
+
+  const borrowedNumber =
+    Number(borrowed) || 0
+
+  const afterRepayment = Math.max(
+    borrowedNumber - repaymentNumber,
+    0
+  )
+
+  // Prevent entering more than debt
+  const handleRepaySubmit = () => {
+    setWalletError('')
+    setStatusMessage('')
+
+    if (!walletAddress) {
+      setWalletError(
+        'Please connect your wallet first.'
+      )
+      return
+    }
+
+    if (borrowedNumber <= 0) {
+      setWalletError(
+        'You do not have any outstanding debt.'
+      )
+      return
+    }
+
+    if (repaymentNumber <= 0) {
+      setWalletError(
+        'Please enter an amount to repay.'
+      )
+      return
+    }
+
+    if (repaymentNumber > borrowedNumber) {
+      setWalletError(
+        'Repayment amount cannot be greater than your outstanding debt.'
+      )
+      return
+    }
+
+    /*
+      The actual repayment transaction will be connected
+      here once the LendingPool repay function is confirmed.
+    */
+
+    setStatusMessage(
+      `Repayment amount ${repaymentNumber.toFixed(6)} ETH is ready.`
+    )
+  }
+
   return (
     <div className="repay-page">
 
-      {/* Page Header */}
-      <div className="page-header">
-        <p className="eyebrow">LENDING</p>
+      {/* ================================
+          PAGE HEADER
+          ================================ */}
 
-        <h1>Repay</h1>
+      <div className="page-header">
+
+        <p className="eyebrow">
+          LENDING
+        </p>
+
+        <h1>
+          Repay
+        </h1>
 
         <p className="subtitle">
           Repay your outstanding borrowed assets and manage your debt.
         </p>
+
       </div>
 
 
-      {/* Main Repay Layout */}
+      {/* ================================
+          MAIN LAYOUT
+          ================================ */}
+
       <div className="repay-layout">
 
 
-        {/* Repayment Panel */}
+        {/* ================================
+            REPAY PANEL
+            ================================ */}
+
         <div className="repay-panel">
 
           <div className="repay-panel-header">
 
             <div>
+
               <p className="panel-eyebrow">
                 REPAY ASSET
               </p>
 
-              <h2>Repay Borrowed ETH</h2>
+              <h2>
+                Repay Borrowed ETH
+              </h2>
 
               <p>
                 Repay your outstanding debt to reduce your borrowing position.
               </p>
+
             </div>
 
             <div className="repay-asset-icon">
@@ -42,19 +260,36 @@ function Repay() {
           </div>
 
 
-          {/* Outstanding Debt */}
+          {/* ================================
+              OUTSTANDING DEBT
+              ================================ */}
+
           <div className="debt-box">
 
             <div className="debt-header">
 
               <div>
-                <span>Outstanding Debt</span>
 
-                <strong>-- ETH</strong>
+                <span>
+                  Outstanding Debt
+                </span>
+
+                <strong>
+                  {walletAddress
+                    ? `${borrowedNumber.toFixed(6)} ETH`
+                    : '-- ETH'}
+                </strong>
+
               </div>
 
               <div className="debt-status">
-                ACTIVE
+
+                {walletAddress
+                  ? active
+                    ? 'ACTIVE'
+                    : 'INACTIVE'
+                  : 'INACTIVE'}
+
               </div>
 
             </div>
@@ -63,18 +298,45 @@ function Repay() {
             <div className="debt-details">
 
               <div>
-                <span>Borrowed</span>
-                <strong>-- ETH</strong>
+
+                <span>
+                  Borrowed
+                </span>
+
+                <strong>
+                  {walletAddress
+                    ? `${borrowedNumber.toFixed(6)} ETH`
+                    : '-- ETH'}
+                </strong>
+
               </div>
 
-              <div>
-                <span>Accrued Interest</span>
-                <strong>-- ETH</strong>
-              </div>
 
               <div>
-                <span>Total Due</span>
-                <strong>-- ETH</strong>
+
+                <span>
+                  Accrued Interest
+                </span>
+
+                <strong>
+                  -- ETH
+                </strong>
+
+              </div>
+
+
+              <div>
+
+                <span>
+                  Total Due
+                </span>
+
+                <strong>
+                  {walletAddress
+                    ? `${borrowedNumber.toFixed(6)} ETH`
+                    : '-- ETH'}
+                </strong>
+
               </div>
 
             </div>
@@ -82,7 +344,10 @@ function Repay() {
           </div>
 
 
-          {/* Repayment Amount */}
+          {/* ================================
+              REPAYMENT AMOUNT
+              ================================ */}
+
           <div className="repay-amount-section">
 
             <div className="repay-label-row">
@@ -92,7 +357,10 @@ function Repay() {
               </label>
 
               <span>
-                Outstanding: -- ETH
+                Outstanding:{' '}
+                {walletAddress
+                  ? `${borrowedNumber.toFixed(6)} ETH`
+                  : '-- ETH'}
               </span>
 
             </div>
@@ -104,12 +372,19 @@ function Repay() {
                 type="number"
                 placeholder="0.00"
                 min="0"
-                step="0.01"
+                step="0.000001"
+                value={repayAmount}
+                onChange={handleRepayAmountChange}
               />
 
-              <button className="repay-asset-selector">
+              <button
+                type="button"
+                className="repay-asset-selector"
+              >
 
-                <span>Ξ</span>
+                <span>
+                  Ξ
+                </span>
 
                 ETH
 
@@ -122,27 +397,59 @@ function Repay() {
             </div>
 
 
+            {/* Percentage shortcuts */}
+
             <div className="repay-shortcuts">
 
-              <button>25%</button>
-              <button>50%</button>
-              <button>75%</button>
-              <button>MAX</button>
+              <button
+                type="button"
+                onClick={() => handlePercentage(0.25)}
+              >
+                25%
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handlePercentage(0.50)}
+              >
+                50%
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handlePercentage(0.75)}
+              >
+                75%
+              </button>
+
+              <button
+                type="button"
+                onClick={handleMaxRepay}
+              >
+                MAX
+              </button>
 
             </div>
 
           </div>
 
 
-          {/* Repayment Information */}
+          {/* ================================
+              REPAYMENT INFORMATION
+              ================================ */}
+
           <div className="repay-info-grid">
 
             <div className="repay-info-card">
 
-              <span>Current Debt</span>
+              <span>
+                Current Debt
+              </span>
 
               <strong>
-                -- ETH
+                {walletAddress
+                  ? `${borrowedNumber.toFixed(6)} ETH`
+                  : '-- ETH'}
               </strong>
 
             </div>
@@ -150,7 +457,9 @@ function Repay() {
 
             <div className="repay-info-card">
 
-              <span>Borrow APY</span>
+              <span>
+                Borrow APY
+              </span>
 
               <strong>
                 -- %
@@ -161,10 +470,14 @@ function Repay() {
 
             <div className="repay-info-card">
 
-              <span>After Repayment</span>
+              <span>
+                After Repayment
+              </span>
 
               <strong>
-                -- ETH
+                {walletAddress
+                  ? `${afterRepayment.toFixed(6)} ETH`
+                  : '-- ETH'}
               </strong>
 
             </div>
@@ -172,7 +485,10 @@ function Repay() {
           </div>
 
 
-          {/* Health Factor */}
+          {/* ================================
+              HEALTH FACTOR
+              ================================ */}
+
           <div className="repay-health-box">
 
             <div className="repay-health-icon">
@@ -183,7 +499,9 @@ function Repay() {
 
               <div className="repay-health-heading">
 
-                <span>Health Factor</span>
+                <span>
+                  Health Factor
+                </span>
 
                 <strong>
                   --
@@ -207,24 +525,49 @@ function Repay() {
           </div>
 
 
-          {/* Action */}
-          <button className="repay-submit-btn">
-            Connect Wallet
+          {/* ================================
+              ACTION BUTTON
+              ================================ */}
+
+          <button
+            type="button"
+            className="repay-submit-btn"
+            onClick={
+              walletAddress
+                ? handleRepaySubmit
+                : handleConnectWallet
+            }
+          >
+
+            {walletAddress
+              ? 'Repay ETH'
+              : 'Connect Wallet'}
+
           </button>
 
 
           <p className="repay-note">
-            Connect your wallet to view your debt and make a repayment.
+
+            {walletAddress
+              ? 'Your debt and collateral data are being read from the LendingPool contract.'
+              : 'Connect your wallet to view your debt and make a repayment.'}
+
           </p>
 
         </div>
 
 
-        {/* Right Side */}
+        {/* ================================
+            RIGHT SIDE
+            ================================ */}
+
         <div className="repay-side">
 
 
-          {/* Current Position */}
+          {/* ================================
+              CURRENT POSITION
+              ================================ */}
+
           <div className="repay-side-panel">
 
             <div className="side-panel-header">
@@ -235,12 +578,20 @@ function Repay() {
                   YOUR POSITION
                 </p>
 
-                <h3>Debt Position</h3>
+                <h3>
+                  Debt Position
+                </h3>
 
               </div>
 
               <span className="repay-position-status">
-                INACTIVE
+
+                {walletAddress
+                  ? active
+                    ? 'ACTIVE'
+                    : 'INACTIVE'
+                  : 'INACTIVE'}
+
               </span>
 
             </div>
@@ -250,10 +601,14 @@ function Repay() {
 
               <div className="repay-position-row">
 
-                <span>Collateral</span>
+                <span>
+                  Collateral
+                </span>
 
                 <strong>
-                  -- ETH
+                  {walletAddress
+                    ? `${Number(collateral).toFixed(6)} ETH`
+                    : '-- ETH'}
                 </strong>
 
               </div>
@@ -261,10 +616,14 @@ function Repay() {
 
               <div className="repay-position-row">
 
-                <span>Outstanding Debt</span>
+                <span>
+                  Outstanding Debt
+                </span>
 
                 <strong>
-                  -- ETH
+                  {walletAddress
+                    ? `${borrowedNumber.toFixed(6)} ETH`
+                    : '-- ETH'}
                 </strong>
 
               </div>
@@ -272,7 +631,9 @@ function Repay() {
 
               <div className="repay-position-row">
 
-                <span>Borrow APY</span>
+                <span>
+                  Borrow APY
+                </span>
 
                 <strong>
                   -- %
@@ -283,7 +644,9 @@ function Repay() {
 
               <div className="repay-position-row">
 
-                <span>Health Factor</span>
+                <span>
+                  Health Factor
+                </span>
 
                 <strong>
                   --
@@ -296,7 +659,10 @@ function Repay() {
           </div>
 
 
-          {/* Repayment Guide */}
+          {/* ================================
+              REPAYMENT GUIDE
+              ================================ */}
+
           <div className="repay-side-panel">
 
             <div className="side-panel-header">
@@ -307,7 +673,9 @@ function Repay() {
                   REPAYMENT GUIDE
                 </p>
 
-                <h3>How Repayment Works</h3>
+                <h3>
+                  How Repayment Works
+                </h3>
 
               </div>
 
@@ -315,7 +683,6 @@ function Repay() {
 
 
             <div className="repayment-steps">
-
 
               <div className="repayment-step">
 
@@ -379,7 +746,6 @@ function Repay() {
 
               </div>
 
-
             </div>
 
           </div>
@@ -389,7 +755,10 @@ function Repay() {
       </div>
 
 
-      {/* Repayment Information */}
+      {/* ================================
+          INFORMATION
+          ================================ */}
+
       <div className="repay-info-note">
 
         <div className="repay-info-icon">
@@ -411,6 +780,27 @@ function Repay() {
         </div>
 
       </div>
+
+
+      {/* ================================
+          ERROR / STATUS
+          ================================ */}
+
+      {walletError && (
+
+        <p className="wallet-error">
+          {walletError}
+        </p>
+
+      )}
+
+      {statusMessage && (
+
+        <p className="transaction-note">
+          {statusMessage}
+        </p>
+
+      )}
 
     </div>
   )
