@@ -6,7 +6,7 @@ import {
   formatUnits,
 } from 'ethers'
 
-import { connectWallet } from '../utils/wallet'
+import { useWallet } from '../context/WalletContext'
 
 import {
   LENDING_POOL_ADDRESS,
@@ -16,11 +16,14 @@ import {
 
 function Markets() {
 
-  const [walletAddress, setWalletAddress] = useState('')
+  const {
+    walletAddress,
+    walletError,
+    connectWallet,
+  } = useWallet()
+
   const [walletBalance, setWalletBalance] = useState('0')
 
-  // Store blockchain values as JavaScript numbers
-  // so .toFixed() works correctly.
   const [collateral, setCollateral] = useState(0)
   const [debt, setDebt] = useState(0)
   const [maxBorrow, setMaxBorrow] = useState(0)
@@ -31,7 +34,7 @@ function Markets() {
   const [liquidationBonus, setLiquidationBonus] = useState(0)
 
   const [loading, setLoading] = useState(false)
-  const [walletError, setWalletError] = useState('')
+  const [marketError, setMarketError] = useState('')
 
 
   /* =========================================
@@ -46,97 +49,141 @@ function Markets() {
         throw new Error('MetaMask is not installed')
       }
 
-      const provider = new BrowserProvider(window.ethereum)
+      const provider =
+        new BrowserProvider(window.ethereum)
 
-      const lendingPool = new Contract(
-        LENDING_POOL_ADDRESS,
-        LENDING_POOL_ABI,
-        provider
-      )
+      const lendingPool =
+        new Contract(
+          LENDING_POOL_ADDRESS,
+          LENDING_POOL_ABI,
+          provider
+        )
 
 
       /* =====================================
          USER COLLATERAL
       ===================================== */
 
-      const collateralValue =
-        await lendingPool.getCollateralValue(address)
+      if (
+        typeof lendingPool.getCollateralValue === 'function'
+      ) {
 
-      setCollateral(
-        Number(formatEther(collateralValue))
-      )
+        const collateralValue =
+          await lendingPool.getCollateralValue(address)
+
+        setCollateral(
+          Number(formatEther(collateralValue))
+        )
+
+      }
 
 
       /* =====================================
          USER CURRENT DEBT
       ===================================== */
 
-      const currentDebt =
-        await lendingPool.getCurrentDebt(address)
+      if (
+        typeof lendingPool.getCurrentDebt === 'function'
+      ) {
 
-      setDebt(
-        Number(formatUnits(currentDebt, 6))
-      )
+        const currentDebt =
+          await lendingPool.getCurrentDebt(address)
+
+        setDebt(
+          Number(formatUnits(currentDebt, 6))
+        )
+
+      }
 
 
       /* =====================================
          MAXIMUM BORROW
       ===================================== */
 
-      const maximumBorrow =
-        await lendingPool.getMaxBorrowAmount(address)
+      if (
+        typeof lendingPool.getMaxBorrowAmount === 'function'
+      ) {
 
-      setMaxBorrow(
-        Number(formatUnits(maximumBorrow, 6))
-      )
+        const maximumBorrow =
+          await lendingPool.getMaxBorrowAmount(address)
+
+        setMaxBorrow(
+          Number(formatUnits(maximumBorrow, 6))
+        )
+
+      }
 
 
       /* =====================================
          HEALTH FACTOR
       ===================================== */
 
-      const health =
-        await lendingPool.getHealthFactor(address)
+      if (
+        typeof lendingPool.getHealthFactor === 'function'
+      ) {
 
-      setHealthFactor(
-        Number(formatUnits(health, 18))
-      )
+        const health =
+          await lendingPool.getHealthFactor(address)
+
+        setHealthFactor(
+          Number(formatUnits(health, 18))
+        )
+
+      }
 
 
       /* =====================================
          MAX LTV
       ===================================== */
 
-      const ltv =
-        await lendingPool.MAX_LTV()
+      if (
+        typeof lendingPool.MAX_LTV === 'function'
+      ) {
 
-      setMaxLTV(
-        Number(ltv)
-      )
+        const ltv =
+          await lendingPool.MAX_LTV()
+
+        setMaxLTV(
+          Number(ltv)
+        )
+
+      }
 
 
       /* =====================================
          INTEREST RATE
       ===================================== */
 
-      const rate =
-        await lendingPool.INTEREST_RATE()
+      if (
+        typeof lendingPool.INTEREST_RATE === 'function'
+      ) {
 
-      setInterestRate(
-        Number(rate)
-      )
+        const rate =
+          await lendingPool.INTEREST_RATE()
+
+        setInterestRate(
+          Number(rate)
+        )
+
+      }
 
 
       /* =====================================
          LIQUIDATION BONUS
       ===================================== */
 
-      const bonus =
-        await lendingPool.LIQUIDATION_BONUS()
+      if (
+        typeof lendingPool.LIQUIDATION_BONUS === 'function'
+      ) {
 
-      setLiquidationBonus(
-        Number(bonus)
-      )
+        const bonus =
+          await lendingPool.LIQUIDATION_BONUS()
+
+        setLiquidationBonus(
+          Number(bonus)
+        )
+
+      }
 
     } catch (error) {
 
@@ -159,21 +206,22 @@ function Markets() {
     try {
 
       setLoading(true)
-      setWalletError('')
+      setMarketError('')
 
       const wallet =
         await connectWallet()
 
-      const address =
-        wallet.address
+      if (wallet?.address) {
 
-      setWalletAddress(address)
+        setWalletBalance(
+          wallet.balance || '0'
+        )
 
-      setWalletBalance(
-        wallet.balance || '0'
-      )
+        await loadMarketData(
+          wallet.address
+        )
 
-      await loadMarketData(address)
+      }
 
     } catch (error) {
 
@@ -182,7 +230,7 @@ function Markets() {
         error
       )
 
-      setWalletError(
+      setMarketError(
         error?.message ||
         'Failed to connect wallet or load market data.'
       )
@@ -207,9 +255,11 @@ function Markets() {
     try {
 
       setLoading(true)
-      setWalletError('')
+      setMarketError('')
 
-      await loadMarketData(walletAddress)
+      await loadMarketData(
+        walletAddress
+      )
 
     } catch (error) {
 
@@ -218,7 +268,7 @@ function Markets() {
         error
       )
 
-      setWalletError(
+      setMarketError(
         error?.message ||
         'Failed to refresh market data.'
       )
@@ -269,7 +319,6 @@ function Markets() {
       </div>
 
 
-
       {/* =====================================
           WALLET CONNECTION
       ===================================== */}
@@ -308,10 +357,12 @@ function Markets() {
           </p>
 
 
-          {walletError && (
+          {(walletError || marketError) && (
 
             <p className="wallet-error">
-              {walletError}
+
+              {walletError || marketError}
+
             </p>
 
           )}
@@ -342,7 +393,6 @@ function Markets() {
       </section>
 
 
-
       {/* =====================================
           MARKET OVERVIEW
       ===================================== */}
@@ -350,16 +400,13 @@ function Markets() {
       <section className="market-overview">
 
 
-        {/* =================================
-            COLLATERAL
-        ================================= */}
+        {/* COLLATERAL */}
 
         <div className="market-overview-card">
 
           <span>
             ETH Collateral
           </span>
-
 
           <strong>
 
@@ -370,7 +417,6 @@ function Markets() {
 
           </strong>
 
-
           <small>
             Your deposited ETH collateral
           </small>
@@ -378,17 +424,13 @@ function Markets() {
         </div>
 
 
-
-        {/* =================================
-            CURRENT DEBT
-        ================================= */}
+        {/* CURRENT DEBT */}
 
         <div className="market-overview-card">
 
           <span>
             Current Debt
           </span>
-
 
           <strong>
 
@@ -399,7 +441,6 @@ function Markets() {
 
           </strong>
 
-
           <small>
             Your current borrowing
           </small>
@@ -407,17 +448,13 @@ function Markets() {
         </div>
 
 
-
-        {/* =================================
-            MAXIMUM BORROW
-        ================================= */}
+        {/* MAXIMUM BORROW */}
 
         <div className="market-overview-card">
 
           <span>
             Maximum Borrow
           </span>
-
 
           <strong>
 
@@ -428,7 +465,6 @@ function Markets() {
 
           </strong>
 
-
           <small>
             Maximum amount you can borrow
           </small>
@@ -436,10 +472,7 @@ function Markets() {
         </div>
 
 
-
-        {/* =================================
-            HEALTH FACTOR
-        ================================= */}
+        {/* HEALTH FACTOR */}
 
         <div className="market-overview-card">
 
@@ -447,16 +480,16 @@ function Markets() {
             Health Factor
           </span>
 
-
           <strong>
 
             {walletAddress
-              ? healthFactor.toFixed(2)
+              ? healthFactor > 0
+                ? healthFactor.toFixed(2)
+                : '--'
               : '--'
             }
 
           </strong>
-
 
           <small>
             Current loan health
@@ -466,7 +499,6 @@ function Markets() {
 
 
       </section>
-
 
 
       {/* =====================================
@@ -496,7 +528,6 @@ function Markets() {
           </span>
 
         </div>
-
 
 
         {/* =================================
@@ -530,17 +561,13 @@ function Markets() {
           </div>
 
 
-
-          {/* =================================
-              MAX LTV
-          ================================= */}
+          {/* MAX LTV */}
 
           <div className="market-stat">
 
             <span>
               MAX LTV
             </span>
-
 
             <strong>
 
@@ -554,17 +581,13 @@ function Markets() {
           </div>
 
 
-
-          {/* =================================
-              INTEREST RATE
-          ================================= */}
+          {/* INTEREST RATE */}
 
           <div className="market-stat">
 
             <span>
               INTEREST RATE
             </span>
-
 
             <strong>
 
@@ -578,17 +601,13 @@ function Markets() {
           </div>
 
 
-
-          {/* =================================
-              LIQUIDATION BONUS
-          ================================= */}
+          {/* LIQUIDATION BONUS */}
 
           <div className="market-stat">
 
             <span>
               LIQUIDATION BONUS
             </span>
-
 
             <strong>
 
@@ -602,17 +621,13 @@ function Markets() {
           </div>
 
 
-
-          {/* =================================
-              USER COLLATERAL
-          ================================= */}
+          {/* USER COLLATERAL */}
 
           <div className="market-stat">
 
             <span>
               YOUR COLLATERAL
             </span>
-
 
             <strong>
 
@@ -626,10 +641,7 @@ function Markets() {
           </div>
 
 
-
-          {/* =================================
-              ACTION
-          ================================= */}
+          {/* ACTION */}
 
           <div className="market-action">
 
@@ -649,7 +661,6 @@ function Markets() {
 
 
         </div>
-
 
 
         {/* =================================
@@ -681,7 +692,6 @@ function Markets() {
 
 
       </section>
-
 
 
       {/* =====================================

@@ -1,24 +1,28 @@
 import { useState } from 'react'
 import { BrowserProvider, Contract, formatEther } from 'ethers'
 
-import { connectWallet } from '../utils/wallet'
+import { useWallet } from '../context/WalletContext'
+
 import {
   LENDING_POOL_ADDRESS,
   LENDING_POOL_ABI,
 } from '../utils/contracts'
 
 function Portfolio() {
-  const [walletAddress, setWalletAddress] = useState('')
-  const [walletBalance, setWalletBalance] = useState('0')
+  const {
+    walletAddress,
+    walletError,
+    connectWallet,
+  } = useWallet()
+
   const [collateral, setCollateral] = useState('0')
   const [borrowed, setBorrowed] = useState('0')
   const [active, setActive] = useState(false)
 
-  const [walletError, setWalletError] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
 
   // ==========================================
-  // LOAD PORTFOLIO DATA FROM SMART CONTRACT
+  // LOAD PORTFOLIO DATA
   // ==========================================
 
   const loadPortfolio = async (address) => {
@@ -27,7 +31,9 @@ function Portfolio() {
         return
       }
 
-      const provider = new BrowserProvider(window.ethereum)
+      const provider = new BrowserProvider(
+        window.ethereum
+      )
 
       const lendingPool = new Contract(
         LENDING_POOL_ADDRESS,
@@ -53,7 +59,7 @@ function Portfolio() {
         error
       )
 
-      setWalletError(
+      setStatusMessage(
         'Wallet connected, but portfolio data could not be loaded.'
       )
     }
@@ -65,25 +71,19 @@ function Portfolio() {
 
   const handleConnectWallet = async () => {
     try {
-      setWalletError('')
-      setStatusMessage('Connecting wallet...')
+      setStatusMessage(
+        'Connecting wallet...'
+      )
 
       const wallet = await connectWallet()
 
-      // Save wallet address
-      setWalletAddress(wallet.address)
+      if (wallet?.address) {
+        await loadPortfolio(wallet.address)
 
-      // Save wallet balance
-      setWalletBalance(
-        wallet.balance || '0'
-      )
-
-      // Load smart-contract portfolio data
-      await loadPortfolio(wallet.address)
-
-      setStatusMessage(
-        'Portfolio loaded successfully.'
-      )
+        setStatusMessage(
+          'Portfolio loaded successfully.'
+        )
+      }
 
     } catch (error) {
       console.error(
@@ -92,11 +92,6 @@ function Portfolio() {
       )
 
       setStatusMessage('')
-
-      setWalletError(
-        error?.message ||
-        'Failed to connect wallet.'
-      )
     }
   }
 
@@ -127,8 +122,8 @@ function Portfolio() {
           </h1>
 
           <p className="subtitle">
-            Track your supplied assets, borrowed positions
-            and portfolio health.
+            Track your supplied assets, borrowed
+            positions and portfolio health.
           </p>
 
         </div>
@@ -152,6 +147,8 @@ function Portfolio() {
 
       <section className="portfolio-summary">
 
+        {/* PORTFOLIO VALUE */}
+
         <div className="portfolio-summary-card">
 
           <span>
@@ -170,6 +167,8 @@ function Portfolio() {
 
         </div>
 
+
+        {/* SUPPLIED */}
 
         <div className="portfolio-summary-card">
 
@@ -190,6 +189,8 @@ function Portfolio() {
         </div>
 
 
+        {/* BORROWED */}
+
         <div className="portfolio-summary-card">
 
           <span>
@@ -209,6 +210,8 @@ function Portfolio() {
         </div>
 
 
+        {/* HEALTH FACTOR */}
+
         <div className="portfolio-summary-card">
 
           <span>
@@ -220,7 +223,7 @@ function Portfolio() {
           </strong>
 
           <small>
-            Available after risk logic is implemented
+            Awaiting protocol risk logic
           </small>
 
         </div>
@@ -265,6 +268,8 @@ function Portfolio() {
 
         <div className="portfolio-asset">
 
+          {/* ASSET */}
+
           <div className="portfolio-asset-info">
 
             <div className="portfolio-eth-icon">
@@ -286,6 +291,8 @@ function Portfolio() {
           </div>
 
 
+          {/* SUPPLIED */}
+
           <div className="portfolio-stat">
 
             <span>
@@ -302,6 +309,8 @@ function Portfolio() {
 
           </div>
 
+
+          {/* BORROWED */}
 
           <div className="portfolio-stat">
 
@@ -320,6 +329,8 @@ function Portfolio() {
           </div>
 
 
+          {/* NET POSITION */}
+
           <div className="portfolio-stat">
 
             <span>
@@ -336,6 +347,8 @@ function Portfolio() {
 
           </div>
 
+
+          {/* STATUS */}
 
           <div className="portfolio-stat">
 
@@ -375,8 +388,9 @@ function Portfolio() {
             </h3>
 
             <p>
-              Your portfolio data is being read directly
-              from the LendingPool smart contract.
+              Your collateral, borrowed amount and
+              loan status are being read directly from
+              the LendingPool smart contract.
             </p>
 
           </div>
@@ -440,10 +454,10 @@ function Portfolio() {
 
           <p>
             Your collateral and borrowed amounts are
-            retrieved from the LendingPool contract.
-            Health factor and risk information will be
-            connected when the protocol's risk logic
-            is implemented.
+            retrieved directly from the LendingPool
+            contract. Health factor and risk information
+            will be connected when the protocol's risk
+            logic is implemented.
           </p>
 
         </div>
@@ -452,7 +466,7 @@ function Portfolio() {
 
 
       {/* ======================================
-          ERROR MESSAGE
+          WALLET ERROR
           ====================================== */}
 
       {walletError && (

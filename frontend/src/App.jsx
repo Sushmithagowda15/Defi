@@ -1,9 +1,10 @@
-import { useState } from 'react'
 import { NavLink, Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
 
-import { connectWallet } from './utils/wallet'
+import { useWallet } from './context/WalletContext'
 
+import Welcome from './pages/Welcome'
+import Terms from './pages/Terms'
 import Dashboard from './pages/Dashboard'
 import Lend from './pages/Lend'
 import Borrow from './pages/Borrow'
@@ -13,29 +14,30 @@ import Transactions from './pages/Transactions'
 import Markets from './pages/Markets'
 import Portfolio from './pages/Portfolio'
 
-function App() {
-  const [walletAddress, setWalletAddress] = useState('')
-  const [walletError, setWalletError] = useState('')
+
+function DashboardLayout() {
+  const {
+    walletAddress,
+    walletError,
+    connectWallet
+  } = useWallet()
+
 
   const handleConnectWallet = async () => {
     try {
-      setWalletError('')
-
-      const wallet = await connectWallet()
-
-      setWalletAddress(wallet.address)
+      await connectWallet()
     } catch (error) {
       console.error(error)
-      setWalletError(error.message)
     }
   }
+
 
   return (
     <div className="app">
 
-      {/* ================================
+      {/* =================================
           TOP NAVIGATION
-          ================================ */}
+          ================================= */}
 
       <header className="topbar">
 
@@ -52,12 +54,14 @@ function App() {
 
         </div>
 
+
         <div className="topbar-right">
 
           <div className="network">
             <span className="network-dot"></span>
             <span>Ethereum</span>
           </div>
+
 
           <button
             className="wallet-btn"
@@ -67,6 +71,7 @@ function App() {
               ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
               : 'Connect Wallet'}
           </button>
+
 
           {walletError && (
             <span className="wallet-error">
@@ -78,17 +83,20 @@ function App() {
 
       </header>
 
-      {/* ================================
+
+      {/* =================================
           MAIN LAYOUT
-          ================================ */}
+          ================================= */}
 
       <div className="layout">
 
-        {/* ================================
+
+        {/* =================================
             SIDEBAR
-            ================================ */}
+            ================================= */}
 
         <aside className="sidebar">
+
 
           {/* OVERVIEW */}
 
@@ -97,6 +105,7 @@ function App() {
             <p className="menu-title">
               OVERVIEW
             </p>
+
 
             <NavLink
               to="/dashboard"
@@ -108,6 +117,7 @@ function App() {
               <span className="menu-label">Dashboard</span>
             </NavLink>
 
+
             <NavLink
               to="/markets"
               className={({ isActive }) =>
@@ -117,6 +127,7 @@ function App() {
               <span className="menu-icon">◈</span>
               <span className="menu-label">Markets</span>
             </NavLink>
+
 
             <NavLink
               to="/portfolio"
@@ -130,6 +141,7 @@ function App() {
 
           </div>
 
+
           {/* LENDING */}
 
           <div className="menu-section">
@@ -137,6 +149,7 @@ function App() {
             <p className="menu-title">
               LENDING
             </p>
+
 
             <NavLink
               to="/lend"
@@ -148,6 +161,7 @@ function App() {
               <span className="menu-label">Lend</span>
             </NavLink>
 
+
             <NavLink
               to="/borrow"
               className={({ isActive }) =>
@@ -157,6 +171,7 @@ function App() {
               <span className="menu-icon">↙</span>
               <span className="menu-label">Borrow</span>
             </NavLink>
+
 
             <NavLink
               to="/repay"
@@ -170,6 +185,7 @@ function App() {
 
           </div>
 
+
           {/* ANALYTICS */}
 
           <div className="menu-section">
@@ -177,6 +193,7 @@ function App() {
             <p className="menu-title">
               ANALYTICS
             </p>
+
 
             <NavLink
               to="/risk-analysis"
@@ -187,6 +204,7 @@ function App() {
               <span className="menu-icon">◒</span>
               <span className="menu-label">Risk Analysis</span>
             </NavLink>
+
 
             <NavLink
               to="/transactions"
@@ -199,6 +217,7 @@ function App() {
             </NavLink>
 
           </div>
+
 
           {/* SIDEBAR STATUS */}
 
@@ -226,27 +245,16 @@ function App() {
 
         </aside>
 
-        {/* ================================
+
+        {/* =================================
             PAGE CONTENT
-            ================================ */}
+            ================================= */}
 
         <main className="main-content">
 
           <div className="page-shell">
 
             <Routes>
-
-              {/* DEFAULT ROUTE */}
-
-              <Route
-                path="/"
-                element={
-                  <Navigate
-                    to="/dashboard"
-                    replace
-                  />
-                }
-              />
 
               {/* DASHBOARD */}
 
@@ -255,12 +263,14 @@ function App() {
                 element={<Dashboard />}
               />
 
+
               {/* LEND */}
 
               <Route
                 path="/lend"
                 element={<Lend />}
               />
+
 
               {/* BORROW */}
 
@@ -269,12 +279,14 @@ function App() {
                 element={<Borrow />}
               />
 
+
               {/* REPAY */}
 
               <Route
                 path="/repay"
                 element={<Repay />}
               />
+
 
               {/* RISK ANALYSIS */}
 
@@ -283,12 +295,14 @@ function App() {
                 element={<RiskAnalysis />}
               />
 
+
               {/* TRANSACTIONS */}
 
               <Route
                 path="/transactions"
                 element={<Transactions />}
               />
+
 
               {/* MARKETS */}
 
@@ -297,11 +311,25 @@ function App() {
                 element={<Markets />}
               />
 
+
               {/* PORTFOLIO */}
 
               <Route
                 path="/portfolio"
                 element={<Portfolio />}
+              />
+
+
+              {/* INVALID DASHBOARD ROUTE */}
+
+              <Route
+                path="*"
+                element={
+                  <Navigate
+                    to="/dashboard"
+                    replace
+                  />
+                }
               />
 
             </Routes>
@@ -315,5 +343,51 @@ function App() {
     </div>
   )
 }
+
+
+/* =================================
+   MAIN APP ROUTING
+   ================================= */
+
+function App() {
+
+  return (
+
+    <Routes>
+
+      {/* =================================
+          WELCOME PAGE
+          ================================= */}
+
+      <Route
+        path="/"
+        element={<Welcome />}
+      />
+
+
+      {/* =================================
+          TERMS & CONDITIONS
+          ================================= */}
+
+      <Route
+        path="/terms"
+        element={<Terms />}
+      />
+
+
+      {/* =================================
+          DASHBOARD APPLICATION
+          ================================= */}
+
+      <Route
+        path="/*"
+        element={<DashboardLayout />}
+      />
+
+    </Routes>
+
+  )
+}
+
 
 export default App
