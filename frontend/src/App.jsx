@@ -3,8 +3,8 @@ import './App.css'
 
 import { useWallet } from './context/WalletContext'
 
-import Welcome from './pages/Welcome'
-import Terms from './pages/Terms'
+import Welcome from './Pages/Welcome'
+import Terms from './Pages/Terms'
 import Dashboard from './pages/Dashboard'
 import Lend from './pages/Lend'
 import Borrow from './pages/Borrow'
