@@ -381,8 +381,7 @@ contract LendingPool is ReentrancyGuard {
             "Borrow amount exceeds maximum LTV"
         );
 
-        loans[msg.sender].borrowedAmount +=
-            amount;
+        loans[msg.sender].borrowedAmount = currentDebt + amount;
 
         loans[msg.sender].startTime =
             block.timestamp;

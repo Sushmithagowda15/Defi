@@ -693,6 +693,80 @@ describe("LendingPool", function () {
         }
     );
 
+    it(
+        "should include accrued interest when borrowing again",
+        async function () {
+
+            const {
+              ethers,
+              user,
+              lendingPool
+            } = await deployLendingPool();
+
+            // Deposit 2 ETH as collateral
+            await lendingPool
+              .connect(user)
+              .depositCollateral({
+                value: ethers.parseEther("2")
+              });
+
+            // First borrow: 4000 USDC
+            const firstBorrow =
+              4000n * 10n ** 6n;
+
+            await lendingPool
+              .connect(user)
+              .borrow(firstBorrow);
+
+            // Move time forward by 1 year
+            await ethers.provider.send(
+              "evm_increaseTime",
+              [365 * 24 * 60 * 60]
+            );
+
+            await ethers.provider.send(
+              "evm_mine"
+            );
+
+            // After 1 year at 10% interest:
+            // 4000 USDC -> 4400 USDC
+            const currentDebt =
+               await lendingPool.getCurrentDebt(
+                user.address
+              );
+
+            expect(currentDebt)
+              .to.equal(
+                4400n * 10n ** 6n
+              );
+
+            // Borrow another 100 USDC
+            const secondBorrow =
+              100n * 10n ** 6n;
+
+            await lendingPool
+              .connect(user)
+              .borrow(secondBorrow);
+
+           // New debt should include the accrued interest:
+           // 4400 + 100 = 4500 USDC
+            const newDebt =
+              await lendingPool.getCurrentDebt(
+                user.address
+              );
+
+            expect(newDebt)
+               .to.be.greaterThanOrEqual(
+                 4500n * 10n ** 6n
+               );
+
+            expect(newDebt)
+              .to.be.lessThan(
+                4501n * 10n ** 6n
+               );
+        }
+    );
+
 
     // =========================================================
     // REPAYMENT TESTS
