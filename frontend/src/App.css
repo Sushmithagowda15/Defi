@@ -5130,13 +5130,20 @@ textarea:focus-visible {
   white-space: nowrap;
 }
 
-
 /* =========================================================
    TABLE
    ========================================================= */
 
 .transaction-table {
   width: 100%;
+
+  overflow-x: auto;
+
+  overflow-y: hidden;
+
+  scrollbar-width: thin;
+
+  scrollbar-color: #303a54 #0b111c;
 }
 
 .transaction-table-header {
@@ -5145,21 +5152,27 @@ textarea:focus-visible {
   grid-template-columns:
     1.1fr
     0.8fr
+    1.4fr
     1fr
-    1fr
-    1.1fr
-    1.2fr;
+    1.5fr
+    1.3fr;
 
-  gap: 15px;
+  gap: 18px;
+
+  min-width: 900px;
 
   padding: 13px 23px;
 
   border-bottom: 1px solid #1d2535;
 
   background: rgba(9, 14, 24, 0.7);
+
+  box-sizing: border-box;
 }
 
 .transaction-table-header span {
+  min-width: 0;
+
   color: #505d74;
 
   font-size: 7px;
@@ -5167,6 +5180,182 @@ textarea:focus-visible {
   font-weight: 750;
 
   letter-spacing: 0.8px;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   TRANSACTION ROWS
+   ========================================================= */
+
+.transaction-rows {
+  width: 100%;
+}
+
+.transaction-row {
+  display: grid;
+
+  grid-template-columns:
+    1.1fr
+    0.8fr
+    1.4fr
+    1fr
+    1.5fr
+    1.3fr;
+
+  align-items: center;
+
+  gap: 18px;
+
+  min-width: 900px;
+
+  padding: 17px 23px;
+
+  border-bottom: 1px solid #1b2333;
+
+  background: transparent;
+
+  box-sizing: border-box;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.transaction-row:last-child {
+  border-bottom: none;
+}
+
+.transaction-row:hover {
+  background: rgba(87, 73, 220, 0.045);
+
+  border-bottom-color: #2a3150;
+}
+
+.transaction-row span,
+.transaction-row strong,
+.transaction-row a {
+  min-width: 0;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   TRANSACTION TYPE
+   ========================================================= */
+
+.transaction-row span:first-child {
+  color: #cbd2df;
+
+  font-size: 9px;
+
+  font-weight: 650;
+}
+
+
+/* =========================================================
+   ASSET
+   ========================================================= */
+
+.transaction-row span:nth-child(2) {
+  color: #7e8ba3;
+
+  font-size: 9px;
+
+  font-weight: 600;
+}
+
+
+/* =========================================================
+   AMOUNT
+   ========================================================= */
+
+.transaction-row strong {
+  color: #e2e6ef;
+
+  font-size: 9px;
+
+  font-weight: 650;
+}
+
+
+/* =========================================================
+   STATUS
+   ========================================================= */
+
+.transaction-row span:nth-child(4) {
+  color: #55c7a1;
+
+  font-size: 8px;
+
+  font-weight: 650;
+}
+
+
+/* =========================================================
+   DATE
+   ========================================================= */
+
+.transaction-row span:nth-child(5) {
+  color: #69768c;
+
+  font-size: 8px;
+}
+
+
+/* =========================================================
+   TRANSACTION HASH
+   ========================================================= */
+
+.transaction-row a {
+  display: block;
+
+  color: #8075ed;
+
+  font-size: 8px;
+
+  font-weight: 600;
+
+  text-decoration: none;
+
+  transition:
+    color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.transaction-row a:hover {
+  color: #a39bff;
+
+  text-decoration: underline;
+}
+
+
+/* =========================================================
+   TABLE SCROLLBAR
+   ========================================================= */
+
+.transaction-table::-webkit-scrollbar {
+  height: 6px;
+}
+
+.transaction-table::-webkit-scrollbar-track {
+  background: #0b111c;
+}
+
+.transaction-table::-webkit-scrollbar-thumb {
+  background: #303a54;
+
+  border-radius: 10px;
+}
+
+.transaction-table::-webkit-scrollbar-thumb:hover {
+  background: #4a5575;
 }
 
 
@@ -5316,12 +5505,12 @@ textarea:focus-visible {
     overflow-x: auto;
   }
 
-  .transaction-table-header {
-    min-width: 750px;
+  .transaction-table-header,
+  .transaction-row {
+    min-width: 900px;
   }
 
 }
-
 
 @media (max-width: 700px) {
 

@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BrowserProvider, Contract, formatEther } from 'ethers'
+import {
+  BrowserProvider,
+  Contract,
+  MaxUint256,
+  formatEther,
+  formatUnits,
+} from 'ethers'
 
 import { connectWallet } from '../utils/wallet'
 
@@ -18,8 +24,11 @@ function Dashboard() {
   const [walletBalance, setWalletBalance] = useState('0')
   const [collateral, setCollateral] = useState('0')
   const [borrowed, setBorrowed] = useState('0')
-  const [hasPosition, setHasPosition] = useState(false)
-
+const [collateralValueUsd, setCollateralValueUsd] =
+  useState('0')
+const [healthFactor, setHealthFactor] =
+  useState(null)
+const [hasPosition, setHasPosition] = useState(false)
   const [loading, setLoading] = useState(false)
   const [walletError, setWalletError] = useState('')
 
@@ -66,26 +75,51 @@ function Dashboard() {
 
 
       const collateralAmount =
-        loan.collateralAmount ?? loan[0] ?? 0
+  loan.collateralAmount ?? loan[0] ?? 0
 
-      const borrowedAmount =
-        loan.borrowedAmount ?? loan[1] ?? 0
+const active =
+  loan.active ?? loan[3] ?? false
 
-      const active =
-        loan.active ?? loan[2] ?? false
+/*
+ * Current debt includes accrued interest.
+ * The contract returns USDC in 6-decimal units.
+ */
+const currentDebt =
+  await lendingPool.getCurrentDebt(address)
 
+/*
+ * Collateral value is returned as an 18-decimal
+ * USD value by the LendingPool.
+ */
+const collateralValue =
+  await lendingPool.getCollateralValue(address)
 
-      setCollateral(
-        formatEther(collateralAmount)
-      )
+/*
+ * Health factor is returned with 18 decimals.
+ * No debt returns MaxUint256.
+ */
+const rawHealthFactor =
+  await lendingPool.getHealthFactor(address)
 
+setCollateral(
+  formatEther(collateralAmount)
+)
 
-      setBorrowed(
-        formatEther(borrowedAmount)
-      )
+setBorrowed(
+  formatUnits(currentDebt, 6)
+)
 
+setCollateralValueUsd(
+  formatEther(collateralValue)
+)
 
-      setHasPosition(active)
+setHealthFactor(
+  rawHealthFactor === MaxUint256
+    ? null
+    : Number(formatEther(rawHealthFactor))
+)
+
+setHasPosition(active)
 
     } catch (error) {
 
@@ -101,9 +135,10 @@ function Dashboard() {
       */
 
       setCollateral('0')
-      setBorrowed('0')
-      setHasPosition(false)
-
+setBorrowed('0')
+setCollateralValueUsd('0')
+setHealthFactor(null)
+setHasPosition(false)
     }
 
   }
@@ -172,21 +207,30 @@ function Dashboard() {
   ================================= */
 
   const collateralValue =
-    Number(collateral) || 0
+  Number(collateral) || 0
 
-  const borrowedValue =
-    Number(borrowed) || 0
+const collateralUsdValue =
+  Number(collateralValueUsd) || 0
 
+const borrowedValue =
+  Number(borrowed) || 0
 
-  const netPosition =
-    collateralValue - borrowedValue
+/*
+ * Net position must use comparable units.
+ * Collateral USD value and USDC debt are both
+ * dollar-denominated.
+ */
+const netPosition =
+  collateralUsdValue - borrowedValue
 
-
-  const utilization =
-    collateralValue > 0
-      ? (borrowedValue / collateralValue) * 100
-      : 0
-
+/*
+ * Borrow utilization is calculated against the
+ * USD value of collateral.
+ */
+const utilization =
+  collateralUsdValue > 0
+    ? (borrowedValue / collateralUsdValue) * 100
+    : 0
 
   return (
 
@@ -407,9 +451,8 @@ function Dashboard() {
             <h3>
 
               {walletAddress
-                ? `${borrowedValue.toFixed(6)} ETH`
-                : '-- ETH'}
-
+  ? `${borrowedValue.toFixed(6)} USDC`
+  : '-- USDC'}
             </h3>
 
 
@@ -539,10 +582,9 @@ function Dashboard() {
 
                 <strong>
 
-                  {walletAddress
-                    ? `${borrowedValue.toFixed(6)} ETH`
-                    : '-- ETH'}
-
+                 {walletAddress
+  ? `${borrowedValue.toFixed(6)} USDC`
+  : '-- USDC'}
                 </strong>
 
               </div>
@@ -580,9 +622,12 @@ function Dashboard() {
 
 
                 <strong>
-                  --
-                </strong>
-
+  {!walletAddress
+    ? '--'
+    : healthFactor === null
+      ? 'No Debt'
+      : healthFactor.toFixed(2)}
+</strong>
               </div>
 
 
@@ -616,9 +661,8 @@ function Dashboard() {
 
 
               <span className="powered-badge">
-                ML POWERED
-              </span>
-
+  PROTOCOL RISK
+</span>
 
             </div>
 
@@ -646,22 +690,18 @@ function Dashboard() {
 
 
                 <h3>
-
-                  {walletAddress
-                    ? 'Risk analysis pending'
-                    : 'Risk analysis unavailable'}
-
-                </h3>
-
+  {!walletAddress
+    ? '--'
+    : healthFactor === null
+      ? 'No Debt'
+      : healthFactor.toFixed(2)}
+</h3>
 
                 <p>
 
                   {walletAddress
-
-                    ? 'Your wallet is connected. Detailed risk analysis will be available when the ML risk engine is integrated.'
-
-                    : 'Connect your wallet and create a lending position to receive your risk assessment.'}
-
+  ? 'Risk metrics are calculated from your on-chain collateral, current debt and health factor.'
+  : 'Connect your wallet and create a lending position to receive your risk assessment.'}
                 </p>
 
 

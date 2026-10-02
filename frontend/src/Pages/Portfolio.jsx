@@ -1,57 +1,125 @@
-import { useState } from 'react'
-import { BrowserProvider, Contract, formatEther } from 'ethers'
-
-import { useWallet } from '../context/WalletContext'
-
+import { useEffect, useState } from 'react'
 import {
-  LENDING_POOL_ADDRESS,
-  LENDING_POOL_ABI,
-} from '../utils/contracts'
+  formatEther,
+  formatUnits,
+  MaxUint256
+} from 'ethers'
+
+import { connectWallet } from '../utils/wallet'
+import { getLendingPool } from '../utils/contracts'
 
 function Portfolio() {
-  const {
-    walletAddress,
-    walletError,
-    connectWallet,
-  } = useWallet()
-
-  const [collateral, setCollateral] = useState('0')
+  const [walletAddress, setWalletAddress] = useState('')
+  const [ethBalance, setEthBalance] = useState('0')
+  const [supplied, setSupplied] = useState('0')
   const [borrowed, setBorrowed] = useState('0')
-  const [active, setActive] = useState(false)
+  const [collateralValue, setCollateralValue] = useState('0')
+  const [healthFactor, setHealthFactor] = useState(null)
+  const [hasPosition, setHasPosition] = useState(false)
 
+  const [walletError, setWalletError] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
-  // ==========================================
-  // LOAD PORTFOLIO DATA
-  // ==========================================
-
-  const loadPortfolio = async (address) => {
+  const loadPortfolio = async () => {
     try {
-      if (!window.ethereum || !address) {
-        return
+      setIsLoading(true)
+      setWalletError('')
+      setStatusMessage('')
+
+      const wallet = await connectWallet()
+
+      const provider = wallet.provider
+      const address = wallet.address
+
+      setWalletAddress(address)
+
+      // Wallet ETH balance
+      const balanceWei =
+        await provider.getBalance(address)
+
+      setEthBalance(
+        formatEther(balanceWei)
+      )
+
+      // LendingPool
+      const lendingPool =
+        getLendingPool(provider)
+
+      // Loan
+      const loan =
+        await lendingPool.loans(address)
+
+      const collateralAmount =
+        loan.collateralAmount ??
+        loan[0] ??
+        0
+
+      const active =
+        loan.active ??
+        loan[3] ??
+        false
+
+      // Supplied ETH
+      const suppliedETH =
+        formatEther(collateralAmount)
+
+      setSupplied(suppliedETH)
+
+      // Current USDC debt
+      const currentDebt =
+        await lendingPool.getCurrentDebt(
+          address
+        )
+
+      const borrowedUSDC =
+        formatUnits(
+          currentDebt,
+          6
+        )
+
+      setBorrowed(borrowedUSDC)
+
+      // Collateral USD value
+      const collateralValueRaw =
+        await lendingPool.getCollateralValue(
+          address
+        )
+
+      const collateralUSD =
+        formatUnits(
+          collateralValueRaw,
+          18
+        )
+
+      setCollateralValue(collateralUSD)
+
+      // Health factor
+      const healthFactorRaw =
+        await lendingPool.getHealthFactor(
+          address
+        )
+
+      if (
+        healthFactorRaw === MaxUint256
+      ) {
+        setHealthFactor(null)
+      } else {
+        setHealthFactor(
+          Number(
+            formatUnits(
+              healthFactorRaw,
+              18
+            )
+          )
+        )
       }
 
-      const provider = new BrowserProvider(
-        window.ethereum
+      setHasPosition(
+        Boolean(active) ||
+        Number(suppliedETH) > 0 ||
+        Number(borrowedUSDC) > 0
       )
-
-      const lendingPool = new Contract(
-        LENDING_POOL_ADDRESS,
-        LENDING_POOL_ABI,
-        provider
-      )
-
-      const loan = await lendingPool.loans(address)
-
-      setCollateral(
-        formatEther(loan.collateralAmount)
-      )
-
-      setBorrowed(
-        formatEther(loan.borrowedAmount)
-      )
-
-      setActive(loan.active)
 
     } catch (error) {
       console.error(
@@ -59,55 +127,48 @@ function Portfolio() {
         error
       )
 
-      setStatusMessage(
-        'Wallet connected, but portfolio data could not be loaded.'
+      setWalletError(
+        error?.shortMessage ||
+        error?.reason ||
+        error?.message ||
+        'Failed to load portfolio data.'
       )
+
+      setSupplied('0')
+      setBorrowed('0')
+      setCollateralValue('0')
+      setHealthFactor(null)
+      setHasPosition(false)
+
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  // ==========================================
-  // CONNECT WALLET
-  // ==========================================
+  useEffect(() => {
+    loadPortfolio()
+  }, [])
 
-  const handleConnectWallet = async () => {
-    try {
-      setStatusMessage(
-        'Connecting wallet...'
-      )
+  const suppliedNumber =
+    Number(supplied) || 0
 
-      const wallet = await connectWallet()
+  const borrowedNumber =
+    Number(borrowed) || 0
 
-      if (wallet?.address) {
-        await loadPortfolio(wallet.address)
-
-        setStatusMessage(
-          'Portfolio loaded successfully.'
-        )
-      }
-
-    } catch (error) {
-      console.error(
-        'Portfolio wallet connection failed:',
-        error
-      )
-
-      setStatusMessage('')
-    }
-  }
-
-  // ==========================================
-  // NET POSITION
-  // ==========================================
+  const collateralUSDNumber =
+    Number(collateralValue) || 0
 
   const netPosition =
-    Number(collateral) - Number(borrowed)
+    collateralUSDNumber -
+    borrowedNumber
+
+  const healthFactorDisplay =
+    healthFactor === null
+      ? 'No Debt'
+      : healthFactor.toFixed(2)
 
   return (
     <div className="portfolio-page">
-
-      {/* ======================================
-          PAGE HEADER
-          ====================================== */}
 
       <div className="portfolio-header">
 
@@ -122,8 +183,7 @@ function Portfolio() {
           </h1>
 
           <p className="subtitle">
-            Track your supplied assets, borrowed
-            positions and portfolio health.
+            Track your supplied assets, borrowed positions and portfolio health.
           </p>
 
         </div>
@@ -141,13 +201,28 @@ function Portfolio() {
       </div>
 
 
-      {/* ======================================
-          PORTFOLIO SUMMARY
-          ====================================== */}
+      {walletError && (
+        <p className="wallet-error">
+          {walletError}
+        </p>
+      )}
+
+
+      {isLoading && (
+        <p className="transaction-note">
+          Loading portfolio data...
+        </p>
+      )}
+
+
+      {statusMessage && (
+        <p className="transaction-note">
+          {statusMessage}
+        </p>
+      )}
+
 
       <section className="portfolio-summary">
-
-        {/* PORTFOLIO VALUE */}
 
         <div className="portfolio-summary-card">
 
@@ -157,18 +232,16 @@ function Portfolio() {
 
           <strong>
             {walletAddress
-              ? `${Number(collateral).toFixed(6)} ETH`
-              : '-- ETH'}
+              ? `$${collateralUSDNumber.toFixed(2)}`
+              : '--'}
           </strong>
 
           <small>
-            ETH collateral position
+            Current collateral value
           </small>
 
         </div>
 
-
-        {/* SUPPLIED */}
 
         <div className="portfolio-summary-card">
 
@@ -178,18 +251,16 @@ function Portfolio() {
 
           <strong>
             {walletAddress
-              ? `${Number(collateral).toFixed(6)} ETH`
+              ? `${suppliedNumber.toFixed(6)} ETH`
               : '-- ETH'}
           </strong>
 
           <small>
-            Assets supplied to protocol
+            ETH supplied to protocol
           </small>
 
         </div>
 
-
-        {/* BORROWED */}
 
         <div className="portfolio-summary-card">
 
@@ -199,18 +270,16 @@ function Portfolio() {
 
           <strong>
             {walletAddress
-              ? `${Number(borrowed).toFixed(6)} ETH`
-              : '-- ETH'}
+              ? `${borrowedNumber.toFixed(6)} USDC`
+              : '-- USDC'}
           </strong>
 
           <small>
-            Outstanding borrowed assets
+            Outstanding USDC debt
           </small>
 
         </div>
 
-
-        {/* HEALTH FACTOR */}
 
         <div className="portfolio-summary-card">
 
@@ -219,21 +288,19 @@ function Portfolio() {
           </span>
 
           <strong>
-            --
+            {walletAddress
+              ? healthFactorDisplay
+              : '--'}
           </strong>
 
           <small>
-            Awaiting protocol risk logic
+            Protocol health factor
           </small>
 
         </div>
 
       </section>
 
-
-      {/* ======================================
-          MAIN PORTFOLIO PANEL
-          ====================================== */}
 
       <section className="portfolio-panel">
 
@@ -252,23 +319,15 @@ function Portfolio() {
           </div>
 
           <span className="portfolio-live-badge">
-
-            {walletAddress
-              ? 'CONNECTED'
+            {hasPosition
+              ? 'ACTIVE'
               : 'PORTFOLIO'}
-
           </span>
 
         </div>
 
 
-        {/* ==================================
-            ETH POSITION
-            ================================== */}
-
         <div className="portfolio-asset">
-
-          {/* ASSET */}
 
           <div className="portfolio-asset-info">
 
@@ -291,8 +350,6 @@ function Portfolio() {
           </div>
 
 
-          {/* SUPPLIED */}
-
           <div className="portfolio-stat">
 
             <span>
@@ -300,17 +357,13 @@ function Portfolio() {
             </span>
 
             <strong>
-
               {walletAddress
-                ? `${Number(collateral).toFixed(6)} ETH`
+                ? `${suppliedNumber.toFixed(6)} ETH`
                 : '-- ETH'}
-
             </strong>
 
           </div>
 
-
-          {/* BORROWED */}
 
           <div className="portfolio-stat">
 
@@ -319,17 +372,13 @@ function Portfolio() {
             </span>
 
             <strong>
-
               {walletAddress
-                ? `${Number(borrowed).toFixed(6)} ETH`
-                : '-- ETH'}
-
+                ? `${borrowedNumber.toFixed(6)} USDC`
+                : '-- USDC'}
             </strong>
 
           </div>
 
-
-          {/* NET POSITION */}
 
           <div className="portfolio-stat">
 
@@ -338,32 +387,24 @@ function Portfolio() {
             </span>
 
             <strong>
-
               {walletAddress
-                ? `${netPosition.toFixed(6)} ETH`
-                : '-- ETH'}
-
+                ? `$${netPosition.toFixed(2)}`
+                : '--'}
             </strong>
 
           </div>
 
 
-          {/* STATUS */}
-
           <div className="portfolio-stat">
 
             <span>
-              STATUS
+              VALUE
             </span>
 
             <strong>
-
               {walletAddress
-                ? active
-                  ? 'ACTIVE'
-                  : 'INACTIVE'
+                ? `$${collateralUSDNumber.toFixed(2)}`
                 : '--'}
-
             </strong>
 
           </div>
@@ -371,70 +412,51 @@ function Portfolio() {
         </div>
 
 
-        {/* ==================================
-            CONNECTED STATE
-            ================================== */}
+        <div className="portfolio-empty">
 
-        {walletAddress ? (
-
-          <div className="portfolio-empty">
-
-            <div className="portfolio-empty-icon">
-              ✓
-            </div>
-
-            <h3>
-              Portfolio Connected
-            </h3>
-
-            <p>
-              Your collateral, borrowed amount and
-              loan status are being read directly from
-              the LendingPool smart contract.
-            </p>
-
+          <div className="portfolio-empty-icon">
+            {hasPosition ? '✓' : '◉'}
           </div>
 
-        ) : (
+          <h3>
+            {hasPosition
+              ? 'Your portfolio is active'
+              : 'No active lending position'}
+          </h3>
 
-          /* ==================================
-             NOT CONNECTED STATE
-             ================================== */
+          <p>
+            {hasPosition
+              ? 'Your supplied assets, borrowed positions and portfolio health are being read directly from the Sepolia lending protocol.'
+              : 'Connect your wallet and supply ETH or borrow USDC to create a lending position.'}
+          </p>
 
-          <div className="portfolio-empty">
-
-            <div className="portfolio-empty-icon">
-              ◉
-            </div>
-
-            <h3>
-              Connect your wallet to view your portfolio
-            </h3>
-
-            <p>
-              Your supplied assets, borrowed positions
-              and portfolio status will appear here
-              after connecting your wallet.
-            </p>
-
+          {!hasPosition && !walletAddress && (
             <button
-              type="button"
               className="wallet-btn"
-              onClick={handleConnectWallet}
+              onClick={loadPortfolio}
+              disabled={isLoading}
             >
-              Connect Wallet
+              {isLoading
+                ? 'Connecting...'
+                : 'Connect Wallet'}
             </button>
+          )}
 
-          </div>
+          {!hasPosition && walletAddress && (
+            <button
+              className="wallet-btn"
+              onClick={() => {
+                window.location.href = '/lend'
+              }}
+            >
+              Start Lending
+            </button>
+          )}
 
-        )}
+        </div>
 
       </section>
 
-
-      {/* ======================================
-          PORTFOLIO HEALTH
-          ====================================== */}
 
       <section className="portfolio-health">
 
@@ -453,42 +475,16 @@ function Portfolio() {
           </h3>
 
           <p>
-            Your collateral and borrowed amounts are
-            retrieved directly from the LendingPool
-            contract. Health factor and risk information
-            will be connected when the protocol's risk
-            logic is implemented.
+            Your health factor indicates the relationship
+            between your available borrowing capacity and
+            current debt. A health factor below 1.0 means
+            the position is below the protocol's required
+            collateral level.
           </p>
 
         </div>
 
       </section>
-
-
-      {/* ======================================
-          WALLET ERROR
-          ====================================== */}
-
-      {walletError && (
-
-        <p className="wallet-error">
-          {walletError}
-        </p>
-
-      )}
-
-
-      {/* ======================================
-          STATUS MESSAGE
-          ====================================== */}
-
-      {statusMessage && (
-
-        <p className="transaction-note">
-          {statusMessage}
-        </p>
-
-      )}
 
     </div>
   )

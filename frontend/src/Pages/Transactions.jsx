@@ -1,47 +1,461 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import {
+  JsonRpcProvider,
+  formatEther,
+  formatUnits,
+  id,
+} from 'ethers'
+
 import { connectWallet } from '../utils/wallet'
+import { getLendingPool } from '../utils/contracts'
+
+const SEPOLIA_RPC_URL =
+  'https://ethereum-sepolia-rpc.publicnode.com'
+
+const SEPOLIA_CHAIN_ID = 11155111
+
+const EVENT_TOPICS = [
+  id('CollateralDeposited(address,uint256)'),
+  id('CollateralWithdrawn(address,uint256)'),
+  id('Borrowed(address,uint256)'),
+  id('Repaid(address,uint256)'),
+  id('Liquidated(address,address,uint256,uint256)'),
+]
 
 function Transactions() {
   const [walletAddress, setWalletAddress] = useState('')
-  const [walletError, setWalletError] = useState('')
-  const [statusMessage, setStatusMessage] = useState('')
+  const [transactions, setTransactions] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
   const [filter, setFilter] = useState('All Transactions')
 
-  const handleConnectWallet = async () => {
-    try {
-      setWalletError('')
-      setStatusMessage('')
+  const [totalSupplied, setTotalSupplied] = useState('0')
+  const [totalBorrowed, setTotalBorrowed] = useState('0')
+  const [totalRepaid, setTotalRepaid] = useState('0')
 
+  const loadTransactions = async () => {
+    try {
+      setLoading(true)
+      setError('')
+
+      /*
+       * Connect wallet.
+       * MetaMask is used only for the user's address.
+       * We do NOT use MetaMask's RPC for historical logs.
+       */
       const wallet = await connectWallet()
 
-      setWalletAddress(wallet.address)
+      const address = wallet.address
 
-      setStatusMessage(
-        'Wallet connected successfully.'
+      setWalletAddress(address)
+
+      /*
+       * Dedicated read-only Sepolia RPC.
+       * This avoids MetaMask eth_getLogs/RPC limitations.
+       */
+      const provider = new JsonRpcProvider(
+        SEPOLIA_RPC_URL,
+        SEPOLIA_CHAIN_ID,
+        {
+          staticNetwork: true,
+        }
+      )
+
+      /*
+       * Verify the RPC is actually on Sepolia.
+       */
+      const network = await provider.getNetwork()
+
+      if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
+        throw new Error(
+          'The blockchain reader is not connected to Sepolia.'
+        )
+      }
+
+      const lendingPool = getLendingPool(provider)
+
+      const latestBlock = await provider.getBlockNumber()
+
+      /*
+       * Scan the recent Sepolia history.
+       *
+       * 50,000 blocks is enough for this prototype while
+       * keeping RPC requests manageable.
+       */
+      const blocksToScan = 50000
+
+      const fromBlock = Math.max(
+        latestBlock - blocksToScan,
+        0
+      )
+
+      /*
+       * Small ranges make historical log requests
+       * much more reliable across public RPC providers.
+       */
+      const chunkSize = 1000
+
+      const allTransactions = []
+
+      let supplied = 0
+      let withdrawn = 0
+      let borrowed = 0
+      let repaid = 0
+
+      /*
+       * Cache block timestamps.
+       *
+       * Multiple events can occur in the same block,
+       * so this prevents unnecessary RPC requests.
+       */
+      const blockTimestampCache = new Map()
+
+      /*
+       * Read blockchain logs in chunks.
+       */
+      for (
+        let start = fromBlock;
+        start <= latestBlock;
+        start += chunkSize
+      ) {
+        const end = Math.min(
+          start + chunkSize - 1,
+          latestBlock
+        )
+
+        const logs = await provider.getLogs({
+          address: lendingPool.target,
+          fromBlock: start,
+          toBlock: end,
+          topics: [EVENT_TOPICS],
+        })
+
+        for (const log of logs) {
+          try {
+            const parsed =
+              lendingPool.interface.parseLog(log)
+
+            if (!parsed) {
+              continue
+            }
+
+            const eventName = parsed.name
+            const args = parsed.args
+
+            /*
+             * Determine whether this event belongs
+             * to the connected wallet.
+             */
+            let belongsToWallet = false
+
+            if (
+              eventName === 'CollateralDeposited' ||
+              eventName === 'CollateralWithdrawn' ||
+              eventName === 'Borrowed' ||
+              eventName === 'Repaid'
+            ) {
+              belongsToWallet =
+                String(args[0]).toLowerCase() ===
+                address.toLowerCase()
+            }
+
+            /*
+             * Liquidated:
+             * args[0] = borrower
+             * args[1] = liquidator
+             *
+             * Show the event if the connected wallet is
+             * either the borrower or liquidator.
+             */
+            if (eventName === 'Liquidated') {
+              belongsToWallet =
+                String(args[0]).toLowerCase() ===
+                  address.toLowerCase() ||
+                String(args[1]).toLowerCase() ===
+                  address.toLowerCase()
+            }
+
+            if (!belongsToWallet) {
+              continue
+            }
+
+            /*
+             * Get block timestamp.
+             */
+            let date = '--'
+
+            if (blockTimestampCache.has(log.blockNumber)) {
+              date = blockTimestampCache.get(
+                log.blockNumber
+              )
+            } else {
+              const block = await provider.getBlock(
+                log.blockNumber
+              )
+
+              if (block) {
+                date = new Date(
+                  Number(block.timestamp) * 1000
+                ).toLocaleString()
+
+                blockTimestampCache.set(
+                  log.blockNumber,
+                  date
+                )
+              }
+            }
+
+            /*
+             * SUPPLY
+             */
+            if (
+              eventName === 'CollateralDeposited'
+            ) {
+              const amount = Number(
+                formatEther(args[1])
+              )
+
+              supplied += amount
+
+              allTransactions.push({
+                type: 'Supply',
+                asset: 'ETH',
+                amount: `${amount.toFixed(6)} ETH`,
+                status: 'Confirmed',
+                date,
+                hash: log.transactionHash,
+                blockNumber: log.blockNumber,
+              })
+            }
+
+            /*
+             * WITHDRAW
+             */
+            if (
+              eventName === 'CollateralWithdrawn'
+            ) {
+              const amount = Number(
+                formatEther(args[1])
+              )
+
+              withdrawn += amount
+
+              allTransactions.push({
+                type: 'Withdraw',
+                asset: 'ETH',
+                amount: `${amount.toFixed(6)} ETH`,
+                status: 'Confirmed',
+                date,
+                hash: log.transactionHash,
+                blockNumber: log.blockNumber,
+              })
+            }
+
+            /*
+             * BORROW
+             */
+            if (eventName === 'Borrowed') {
+              const amount = Number(
+                formatUnits(args[1], 6)
+              )
+
+              borrowed += amount
+
+              allTransactions.push({
+                type: 'Borrow',
+                asset: 'USDC',
+                amount: `${amount.toFixed(6)} USDC`,
+                status: 'Confirmed',
+                date,
+                hash: log.transactionHash,
+                blockNumber: log.blockNumber,
+              })
+            }
+
+            /*
+             * REPAY
+             */
+            if (eventName === 'Repaid') {
+              const amount = Number(
+                formatUnits(args[1], 6)
+              )
+
+              repaid += amount
+
+              allTransactions.push({
+                type: 'Repay',
+                asset: 'USDC',
+                amount: `${amount.toFixed(6)} USDC`,
+                status: 'Confirmed',
+                date,
+                hash: log.transactionHash,
+                blockNumber: log.blockNumber,
+              })
+            }
+
+            /*
+             * LIQUIDATION
+             */
+            if (eventName === 'Liquidated') {
+              const debtRepaid = Number(
+                formatUnits(args[2], 6)
+              )
+
+              allTransactions.push({
+                type: 'Liquidation',
+                asset: 'ETH / USDC',
+                amount: `${debtRepaid.toFixed(6)} USDC`,
+                status: 'Confirmed',
+                date,
+                hash: log.transactionHash,
+                blockNumber: log.blockNumber,
+              })
+            }
+          } catch (eventError) {
+            console.error(
+              'Failed to parse transaction event:',
+              eventError
+            )
+          }
+        }
+      }
+
+      /*
+       * Remove accidental duplicate events.
+       */
+      const uniqueTransactions = Array.from(
+        new Map(
+          allTransactions.map((transaction) => [
+            `${transaction.hash}-${transaction.type}`,
+            transaction,
+          ])
+        ).values()
+      )
+
+      /*
+       * Newest transactions first.
+       */
+      uniqueTransactions.sort(
+        (a, b) => {
+          if (b.blockNumber !== a.blockNumber) {
+            return b.blockNumber - a.blockNumber
+          }
+
+          return (
+            new Date(b.date) -
+            new Date(a.date)
+          )
+        }
+      )
+
+      setTransactions(uniqueTransactions)
+
+      /*
+       * Summary values.
+       */
+      setTotalSupplied(
+        Math.max(
+          supplied - withdrawn,
+          0
+        ).toFixed(6)
+      )
+
+      setTotalBorrowed(
+        borrowed.toFixed(6)
+      )
+
+      setTotalRepaid(
+        repaid.toFixed(6)
       )
     } catch (error) {
       console.error(
-        'Wallet connection error:',
+        'Failed to load transactions:',
         error
       )
 
-      setWalletError(
+      let message =
+        error?.shortMessage ||
+        error?.reason ||
         error?.message ||
-        'Failed to connect wallet.'
-      )
+        'Failed to load blockchain transactions.'
+
+      /*
+       * Give the user a useful message instead of
+       * exposing the confusing ethers "coalesce" error.
+       */
+      if (
+        message.toLowerCase().includes(
+          'coalesce'
+        )
+      ) {
+        message =
+          'The Sepolia blockchain history could not be read. Please try Refresh again.'
+      }
+
+      setError(message)
+    } finally {
+      setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadTransactions()
+  }, [])
 
   const handleFilterChange = (event) => {
     setFilter(event.target.value)
   }
 
+  const filteredTransactions =
+    filter === 'All Transactions'
+      ? transactions
+      : transactions.filter(
+          (transaction) => {
+            if (filter === 'Lend') {
+              return (
+                transaction.type ===
+                  'Supply' ||
+                transaction.type ===
+                  'Withdraw'
+              )
+            }
+
+            if (filter === 'Borrow') {
+              return (
+                transaction.type ===
+                'Borrow'
+              )
+            }
+
+            if (filter === 'Repay') {
+              return (
+                transaction.type ===
+                  'Repay' ||
+                transaction.type ===
+                  'Liquidation'
+              )
+            }
+
+            return true
+          }
+        )
+
+  const shortenHash = (hash) => {
+    if (!hash) {
+      return '--'
+    }
+
+    return `${hash.slice(
+      0,
+      8
+    )}...${hash.slice(-6)}`
+  }
+
   return (
     <div className="transactions-page">
 
-      {/* ================================
-          PAGE HEADER
-          ================================ */}
+      {/* PAGE HEADER */}
 
       <div className="transactions-header">
 
@@ -61,13 +475,14 @@ function Transactions() {
 
         </div>
 
-
         <div className="transaction-header-actions">
 
           <select
             className="transaction-filter-btn"
             value={filter}
-            onChange={handleFilterChange}
+            onChange={
+              handleFilterChange
+            }
           >
 
             <option value="All Transactions">
@@ -88,25 +503,60 @@ function Transactions() {
 
           </select>
 
-
-          <div className="transaction-wallet-status">
-
-            <span className="network-dot"></span>
-
-            {walletAddress
-              ? `Connected: ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
-              : 'Wallet Not Connected'}
-
-          </div>
+          <button
+            type="button"
+            className="transaction-filter-btn"
+            onClick={
+              loadTransactions
+            }
+            disabled={loading}
+          >
+            {loading
+              ? 'Loading...'
+              : 'Refresh'}
+          </button>
 
         </div>
 
       </div>
 
 
-      {/* ================================
-          TRANSACTION SUMMARY
-          ================================ */}
+      {/* WALLET */}
+
+      {walletAddress && (
+
+        <p className="transaction-note">
+
+          Connected:{' '}
+
+          {walletAddress.slice(
+            0,
+            6
+          )}
+
+          ...
+
+          {walletAddress.slice(
+            -4
+          )}
+
+        </p>
+
+      )}
+
+
+      {/* ERROR */}
+
+      {error && (
+
+        <p className="wallet-error">
+          {error}
+        </p>
+
+      )}
+
+
+      {/* SUMMARY */}
 
       <section className="transaction-summary">
 
@@ -117,7 +567,7 @@ function Transactions() {
           </span>
 
           <strong>
-            {walletAddress ? '0' : '--'}
+            {transactions.length}
           </strong>
 
           <small>
@@ -134,13 +584,11 @@ function Transactions() {
           </span>
 
           <strong>
-            {walletAddress
-              ? '0.000000 ETH'
-              : '-- ETH'}
+            {totalSupplied} ETH
           </strong>
 
           <small>
-            ETH supplied to protocol
+            ETH currently supplied
           </small>
 
         </div>
@@ -153,13 +601,11 @@ function Transactions() {
           </span>
 
           <strong>
-            {walletAddress
-              ? '0.000000 ETH'
-              : '-- ETH'}
+            {totalBorrowed} USDC
           </strong>
 
           <small>
-            Total borrowed through protocol
+            USDC borrowed through protocol
           </small>
 
         </div>
@@ -172,13 +618,11 @@ function Transactions() {
           </span>
 
           <strong>
-            {walletAddress
-              ? '0.000000 ETH'
-              : '-- ETH'}
+            {totalRepaid} USDC
           </strong>
 
           <small>
-            Amount repaid to protocol
+            USDC repaid to protocol
           </small>
 
         </div>
@@ -186,9 +630,7 @@ function Transactions() {
       </section>
 
 
-      {/* ================================
-          TRANSACTION HISTORY
-          ================================ */}
+      {/* TRANSACTION HISTORY */}
 
       <section className="transactions-panel">
 
@@ -206,21 +648,16 @@ function Transactions() {
 
           </div>
 
-
           <span className="transaction-live-badge">
 
-            {walletAddress
-              ? 'WALLET CONNECTED'
-              : 'BLOCKCHAIN ACTIVITY'}
+            {loading
+              ? 'LOADING'
+              : 'SEPOLIA BLOCKCHAIN'}
 
           </span>
 
         </div>
 
-
-        {/* ================================
-            TRANSACTION TABLE
-            ================================ */}
 
         <div className="transaction-table">
 
@@ -253,90 +690,131 @@ function Transactions() {
           </div>
 
 
-          {/* ================================
-              WALLET NOT CONNECTED
-              ================================ */}
+          {/* LOADING */}
 
-          {!walletAddress && (
+          {loading && (
 
             <div className="transaction-empty">
 
               <div className="transaction-empty-icon">
-                ≡
+                ↻
               </div>
 
               <h3>
-                Connect your wallet
+                Loading transactions...
               </h3>
 
               <p>
-                Connect your wallet to view your
-                lending, borrowing and repayment activity.
+                Reading your activity from the Sepolia blockchain.
               </p>
-
-
-              <button
-                type="button"
-                className="wallet-btn"
-                onClick={handleConnectWallet}
-              >
-                Connect Wallet
-              </button>
 
             </div>
 
           )}
 
 
-          {/* ================================
-              WALLET CONNECTED
-              ================================ */}
+          {/* NO TRANSACTIONS */}
 
-          {walletAddress && (
+          {!loading &&
+            filteredTransactions.length === 0 && (
 
-            <div className="transaction-empty">
+              <div className="transaction-empty">
 
-              <div className="transaction-empty-icon">
-                ✓
+                <div className="transaction-empty-icon">
+                  ≡
+                </div>
+
+                <h3>
+                  No transactions found
+                </h3>
+
+                <p>
+                  Your lending, borrowing and repayment
+                  transactions will appear here.
+                </p>
+
+                <button
+                  className="wallet-btn"
+                  type="button"
+                  onClick={
+                    loadTransactions
+                  }
+                >
+                  Refresh Transactions
+                </button>
+
               </div>
 
-              <h3>
-                No transactions found
-              </h3>
+            )}
 
-              <p>
-                Your wallet is connected, but there are
-                no {filter.toLowerCase()} transactions
-                available to display yet.
-              </p>
 
-              <span className="transaction-wallet-address">
+          {/* TRANSACTIONS */}
 
-                {walletAddress.slice(0, 10)}
-                ...
-                {walletAddress.slice(-8)}
+          {!loading &&
+            filteredTransactions.length > 0 && (
 
-              </span>
+              <div className="transaction-rows">
 
-            </div>
+                {filteredTransactions.map(
+                  (transaction, index) => (
 
-          )}
+                    <div
+                      className="transaction-row"
+                      key={`${transaction.hash}-${transaction.type}-${index}`}
+                    >
+
+                      <span>
+                        {transaction.type}
+                      </span>
+
+                      <span>
+                        {transaction.asset}
+                      </span>
+
+                      <strong>
+                        {transaction.amount}
+                      </strong>
+
+                      <span>
+                        {transaction.status}
+                      </span>
+
+                      <span>
+                        {transaction.date}
+                      </span>
+
+                      <a
+                        href={`https://sepolia.etherscan.io/tx/${transaction.hash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={transaction.hash}
+                      >
+                        {shortenHash(
+                          transaction.hash
+                        )}
+                      </a>
+
+                    </div>
+
+                  )
+                )}
+
+              </div>
+
+            )}
 
         </div>
 
       </section>
 
 
-      {/* ================================
-          TRANSACTION INFORMATION
-          ================================ */}
+      {/* INFORMATION */}
 
       <section className="transaction-info">
 
         <div className="transaction-info-icon">
           i
         </div>
-
 
         <div>
 
@@ -350,40 +828,14 @@ function Transactions() {
 
           <p>
             Every lending, borrowing and repayment
-            operation will be recorded on the blockchain.
-            Transaction hashes can be used to verify
-            activity on the network.
+            operation is read directly from the Sepolia
+            blockchain. Transaction hashes can be used
+            to verify activity on the network.
           </p>
 
         </div>
 
       </section>
-
-
-      {/* ================================
-          ERROR MESSAGE
-          ================================ */}
-
-      {walletError && (
-
-        <p className="wallet-error">
-          {walletError}
-        </p>
-
-      )}
-
-
-      {/* ================================
-          SUCCESS MESSAGE
-          ================================ */}
-
-      {statusMessage && (
-
-        <p className="transaction-note">
-          {statusMessage}
-        </p>
-
-      )}
 
     </div>
   )

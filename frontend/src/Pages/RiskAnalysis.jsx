@@ -1,207 +1,68 @@
 import { useState } from 'react'
-import { BrowserProvider, Contract, formatEther } from 'ethers'
+import {
+  BrowserProvider,
+  Contract,
+  formatEther,
+  formatUnits,
+  MaxUint256,
+} from 'ethers'
 
 import { connectWallet } from '../utils/wallet'
+
 import {
   LENDING_POOL_ADDRESS,
   LENDING_POOL_ABI,
 } from '../utils/contracts'
 
+import { predictRisk } from '../utils/riskApi'
+
+
 function RiskAnalysis() {
 
   const [walletAddress, setWalletAddress] = useState('')
+
   const [collateral, setCollateral] = useState(0)
   const [borrowed, setBorrowed] = useState(0)
+  const [collateralUSD, setCollateralUSD] = useState(0)
+
+  const [ltv, setLtv] = useState(null)
+  const [collateralRatio, setCollateralRatio] = useState(null)
+  const [healthFactor, setHealthFactor] = useState(null)
+
+  const [loanDuration, setLoanDuration] = useState(0)
+  const [interestUSDC, setInterestUSDC] = useState(0)
 
   const [riskScore, setRiskScore] = useState(null)
   const [riskLevel, setRiskLevel] = useState('Awaiting Analysis')
-  const [healthFactor, setHealthFactor] = useState(null)
-  const [ltv, setLtv] = useState(null)
-  const [collateralRatio, setCollateralRatio] = useState(null)
+
+  const [probabilities, setProbabilities] = useState({
+    low: null,
+    medium: null,
+    high: null,
+  })
+
+  const [riskFactors, setRiskFactors] = useState([])
+
+  const [recommendation, setRecommendation] = useState('')
 
   const [loading, setLoading] = useState(false)
+
   const [walletError, setWalletError] = useState('')
+
   const [statusMessage, setStatusMessage] = useState('')
 
-  const LIQUIDATION_THRESHOLD = 80
 
-  // -----------------------------------------
-  // Calculate frontend risk metrics
-  // -----------------------------------------
-  const calculateRisk = (collateralAmount, borrowedAmount) => {
+  // =========================================
+  // Format helper
+  // =========================================
 
-    if (collateralAmount <= 0) {
-
-      setRiskScore(null)
-      setRiskLevel('No Position')
-      setHealthFactor(null)
-      setLtv(null)
-      setCollateralRatio(null)
-
-      return
-    }
-
-    // Loan-to-value
-    const calculatedLtv =
-      (borrowedAmount / collateralAmount) * 100
-
-    // Collateral ratio
-    let calculatedCollateralRatio
-
-    if (borrowedAmount === 0) {
-      calculatedCollateralRatio = Infinity
-    } else {
-      calculatedCollateralRatio =
-        (collateralAmount / borrowedAmount) * 100
-    }
-
-    // Simple frontend health factor.
-    // This will later be replaced by the protocol's
-    // actual risk calculation / ML model.
-    let calculatedHealthFactor
-
-    if (borrowedAmount === 0) {
-      calculatedHealthFactor = Infinity
-    } else {
-      calculatedHealthFactor =
-        (collateralAmount * (LIQUIDATION_THRESHOLD / 100)) /
-        borrowedAmount
-    }
-
-    // -----------------------------------------
-    // Frontend risk score
-    // -----------------------------------------
-
-    let calculatedRiskScore
-
-    if (calculatedLtv <= 30) {
-      calculatedRiskScore = 15
-    } else if (calculatedLtv <= 50) {
-      calculatedRiskScore = 35
-    } else if (calculatedLtv <= 65) {
-      calculatedRiskScore = 55
-    } else if (calculatedLtv <= 75) {
-      calculatedRiskScore = 75
-    } else {
-      calculatedRiskScore = 90
-    }
-
-    let calculatedRiskLevel
-
-    if (calculatedRiskScore <= 30) {
-      calculatedRiskLevel = 'Low Risk'
-    } else if (calculatedRiskScore <= 60) {
-      calculatedRiskLevel = 'Moderate Risk'
-    } else if (calculatedRiskScore <= 80) {
-      calculatedRiskLevel = 'High Risk'
-    } else {
-      calculatedRiskLevel = 'Critical Risk'
-    }
-
-    setLtv(calculatedLtv)
-    setCollateralRatio(calculatedCollateralRatio)
-    setHealthFactor(calculatedHealthFactor)
-    setRiskScore(calculatedRiskScore)
-    setRiskLevel(calculatedRiskLevel)
-  }
-
-
-  // -----------------------------------------
-  // Load portfolio/risk data
-  // -----------------------------------------
-  const loadRiskData = async (address) => {
-
-    try {
-
-      if (!window.ethereum || !address) {
-        return
-      }
-
-      const provider =
-        new BrowserProvider(window.ethereum)
-
-      const lendingPool =
-        new Contract(
-          LENDING_POOL_ADDRESS,
-          LENDING_POOL_ABI,
-          provider
-        )
-
-      const loan =
-        await lendingPool.loans(address)
-
-      const collateralAmount =
-        Number(formatEther(loan.collateralAmount))
-
-      const borrowedAmount =
-        Number(formatEther(loan.borrowedAmount))
-
-      setCollateral(collateralAmount)
-      setBorrowed(borrowedAmount)
-
-      calculateRisk(
-        collateralAmount,
-        borrowedAmount
-      )
-
-    } catch (error) {
-
-      console.error(
-        'Failed to load risk data:',
-        error
-      )
-
-      throw new Error(
-        'Failed to load your risk information from the LendingPool contract.'
-      )
-    }
-  }
-
-
-  // -----------------------------------------
-  // Connect wallet
-  // -----------------------------------------
-  const handleConnectWallet = async () => {
-
-    try {
-
-      setLoading(true)
-      setWalletError('')
-      setStatusMessage('')
-
-      const wallet =
-        await connectWallet()
-
-      setWalletAddress(wallet.address)
-
-      await loadRiskData(wallet.address)
-
-      setStatusMessage(
-        'Risk analysis loaded successfully.'
-      )
-
-    } catch (error) {
-
-      console.error(error)
-
-      setWalletError(
-        error?.message ||
-        'Failed to connect wallet.'
-      )
-
-    } finally {
-
-      setLoading(false)
-    }
-  }
-
-
-  // -----------------------------------------
-  // Format helpers
-  // -----------------------------------------
   const formatNumber = (value, decimals = 2) => {
 
-    if (value === null || value === undefined) {
+    if (
+      value === null ||
+      value === undefined ||
+      Number.isNaN(value)
+    ) {
       return '--'
     }
 
@@ -209,9 +70,13 @@ function RiskAnalysis() {
       return '∞'
     }
 
-    return value.toFixed(decimals)
+    return Number(value).toFixed(decimals)
   }
 
+
+  // =========================================
+  // Risk progress
+  // =========================================
 
   const getRiskProgress = () => {
 
@@ -220,11 +85,15 @@ function RiskAnalysis() {
     }
 
     return Math.min(
-      Math.max(riskScore, 0),
+      Math.max(Number(riskScore), 0),
       100
     )
   }
 
+
+  // =========================================
+  // Health progress
+  // =========================================
 
   const getHealthProgress = () => {
 
@@ -243,8 +112,445 @@ function RiskAnalysis() {
   }
 
 
+  // =========================================
+  // Load blockchain + AI risk data
+  // =========================================
+
+  const loadRiskData = async (address) => {
+
+    if (!window.ethereum || !address) {
+      return
+    }
+
+
+    // -----------------------------------------
+    // Blockchain connection
+    // -----------------------------------------
+
+    const provider =
+      new BrowserProvider(window.ethereum)
+
+    const lendingPool =
+      new Contract(
+        LENDING_POOL_ADDRESS,
+        LENDING_POOL_ABI,
+        provider
+      )
+
+
+    // -----------------------------------------
+    // Read loan
+    // -----------------------------------------
+
+    const loan =
+      await lendingPool.loans(address)
+
+
+    // -----------------------------------------
+    // Collateral
+    // ETH uses 18 decimals
+    // -----------------------------------------
+
+    const collateralAmount =
+      Number(
+        formatEther(
+          loan.collateralAmount
+        )
+      )
+
+
+    setCollateral(collateralAmount)
+
+
+    // -----------------------------------------
+    // Principal borrowed
+    // USDC uses 6 decimals
+    // -----------------------------------------
+
+    const principalBorrowed =
+      Number(
+        formatUnits(
+          loan.borrowedAmount,
+          6
+        )
+      )
+
+
+    // -----------------------------------------
+    // Current debt including interest
+    // -----------------------------------------
+
+    const currentDebtRaw =
+      await lendingPool.getCurrentDebt(address)
+
+
+    const currentDebt =
+      Number(
+        formatUnits(
+          currentDebtRaw,
+          6
+        )
+      )
+
+
+    setBorrowed(currentDebt)
+
+
+    // -----------------------------------------
+    // Collateral USD value
+    // Contract returns 18-decimal USD
+    // -----------------------------------------
+
+    const collateralValueRaw =
+      await lendingPool.getCollateralValue(address)
+
+
+    const collateralValue =
+      Number(
+        formatUnits(
+          collateralValueRaw,
+          18
+        )
+      )
+
+
+    setCollateralUSD(collateralValue)
+
+
+    // -----------------------------------------
+    // Maximum borrow amount
+    // USDC, 6 decimals
+    // -----------------------------------------
+
+    const maxBorrowRaw =
+      await lendingPool.getMaxBorrowAmount(address)
+
+
+    const maxBorrow =
+      Number(
+        formatUnits(
+          maxBorrowRaw,
+          6
+        )
+      )
+
+
+    // -----------------------------------------
+    // Health factor
+    // -----------------------------------------
+
+    const healthFactorRaw =
+      await lendingPool.getHealthFactor(address)
+
+
+    let currentHealthFactor
+
+    if (
+      healthFactorRaw === MaxUint256 ||
+      healthFactorRaw >= MaxUint256
+    ) {
+
+      currentHealthFactor = Infinity
+
+    } else {
+
+      currentHealthFactor =
+        Number(
+          formatUnits(
+            healthFactorRaw,
+            18
+          )
+        )
+
+    }
+
+
+    setHealthFactor(currentHealthFactor)
+
+
+    // -----------------------------------------
+    // LTV
+    // -----------------------------------------
+
+    let currentLTV = 0
+
+    if (collateralValue > 0) {
+
+      currentLTV =
+        (currentDebt / collateralValue) * 100
+
+    }
+
+
+    setLtv(currentLTV)
+
+
+    // -----------------------------------------
+    // Collateral ratio
+    // -----------------------------------------
+
+    let currentCollateralRatio = Infinity
+
+    if (currentDebt > 0) {
+
+      currentCollateralRatio =
+        (collateralValue / currentDebt) * 100
+
+    }
+
+
+    setCollateralRatio(
+      currentCollateralRatio
+    )
+
+
+    // -----------------------------------------
+    // Loan duration
+    // -----------------------------------------
+
+    let durationDays = 0
+
+    if (
+      loan.startTime &&
+      loan.startTime > 0
+    ) {
+
+      const startTimestamp =
+        Number(loan.startTime)
+
+      const nowSeconds =
+        Math.floor(
+          Date.now() / 1000
+        )
+
+      durationDays =
+        Math.max(
+          0,
+          (nowSeconds - startTimestamp) /
+          86400
+        )
+
+    }
+
+
+    setLoanDuration(durationDays)
+
+
+    // -----------------------------------------
+    // Interest
+    // -----------------------------------------
+
+    const interest =
+      Math.max(
+        0,
+        currentDebt - principalBorrowed
+      )
+
+
+    setInterestUSDC(interest)
+
+
+    // =========================================
+    // No active borrowing position
+    // =========================================
+
+    if (
+      collateralAmount <= 0 ||
+      currentDebt <= 0
+    ) {
+
+      setRiskScore(null)
+      setRiskLevel(
+        collateralAmount > 0
+          ? 'No Borrowing'
+          : 'No Position'
+      )
+
+      setProbabilities({
+        low: null,
+        medium: null,
+        high: null,
+      })
+
+      setRiskFactors([])
+
+      setRecommendation(
+        collateralAmount > 0
+          ? 'Your collateral is supplied, but there is currently no outstanding borrowing position to analyze.'
+          : 'Supply ETH collateral and borrow USDC to create a lending position for AI risk analysis.'
+      )
+
+      setStatusMessage(
+        'Blockchain position loaded. No active borrowing position requires AI analysis.'
+      )
+
+      return
+    }
+
+
+    // =========================================
+    // ETH price
+    // =========================================
+    //
+    // collateral USD value comes directly from
+    // the protocol, so derive ETH price from:
+    //
+    // collateral USD / collateral ETH
+    //
+    // =========================================
+
+    let ethPriceUSD = 0
+
+    if (collateralAmount > 0) {
+
+      ethPriceUSD =
+        collateralValue /
+        collateralAmount
+
+    }
+
+
+    // =========================================
+    // AI API request
+    // =========================================
+
+    setStatusMessage(
+      'Blockchain data loaded. Running AI risk analysis...'
+    )
+
+
+    const aiResult =
+      await predictRisk({
+
+        collateral_eth:
+          collateralAmount,
+
+        eth_price_usd:
+          ethPriceUSD,
+
+        collateral_usd:
+          collateralValue,
+
+        borrowed_usdc:
+          currentDebt,
+
+        ltv:
+          currentLTV / 100,
+
+        loan_duration_days:
+          durationDays,
+
+        interest_usdc:
+          interest,
+
+        current_debt_usdc:
+          currentDebt,
+
+        max_borrow_usdc:
+          maxBorrow,
+
+        health_factor:
+          Number.isFinite(currentHealthFactor)
+            ? currentHealthFactor
+            : 10,
+
+      })
+
+
+    // =========================================
+    // Store AI result
+    // =========================================
+
+    setRiskLevel(
+      aiResult.risk_level
+    )
+
+
+    setRiskScore(
+      aiResult.risk_score
+    )
+
+
+    setProbabilities(
+      aiResult.probabilities || {
+        low: 0,
+        medium: 0,
+        high: 0,
+      }
+    )
+
+
+    setRiskFactors(
+      aiResult.risk_factors || []
+    )
+
+
+    setRecommendation(
+      aiResult.recommendation || ''
+    )
+
+
+    setStatusMessage(
+      'AI risk analysis completed successfully.'
+    )
+
+  }
+
+
+  // =========================================
+  // Connect wallet
+  // =========================================
+
+  const handleConnectWallet = async () => {
+
+    try {
+
+      setLoading(true)
+
+      setWalletError('')
+
+      setStatusMessage('')
+
+
+      const wallet =
+        await connectWallet()
+
+
+      setWalletAddress(
+        wallet.address
+      )
+
+
+      await loadRiskData(
+        wallet.address
+      )
+
+    } catch (error) {
+
+      console.error(
+        'Risk analysis error:',
+        error
+      )
+
+
+      setWalletError(
+        error?.message ||
+        'Failed to load risk analysis.'
+      )
+
+    } finally {
+
+      setLoading(false)
+
+    }
+
+  }
+
+
   return (
+
     <div className="risk-page">
+
 
       {/* =====================================
           PAGE HEADER
@@ -255,16 +561,18 @@ function RiskAnalysis() {
         <div>
 
           <p className="eyebrow">
-            ANALYTICS
+            AI ANALYTICS
           </p>
+
 
           <h1>
             Risk Analysis
           </h1>
 
+
           <p className="subtitle">
             Monitor your collateral health, borrowing risk
-            and liquidation exposure.
+            and AI-based lending risk assessment.
           </p>
 
         </div>
@@ -275,8 +583,8 @@ function RiskAnalysis() {
           <span className="risk-status-dot"></span>
 
           {walletAddress
-            ? 'Wallet Connected'
-            : 'Risk Engine Active'}
+            ? 'AI Analysis Active'
+            : 'AI Risk Engine Ready'}
 
         </div>
 
@@ -322,7 +630,7 @@ function RiskAnalysis() {
             <div>
 
               <p className="risk-card-label">
-                OVERALL RISK
+                AI RISK ASSESSMENT
               </p>
 
               <h2>
@@ -335,7 +643,7 @@ function RiskAnalysis() {
             <div className="risk-score-badge">
 
               {riskScore !== null
-                ? riskScore
+                ? formatNumber(riskScore, 0)
                 : '--'}
 
             </div>
@@ -356,7 +664,7 @@ function RiskAnalysis() {
 
                 <strong>
                   {riskScore !== null
-                    ? riskScore
+                    ? formatNumber(riskScore, 0)
                     : '--'}
                 </strong>
 
@@ -372,7 +680,7 @@ function RiskAnalysis() {
             <div className="risk-summary">
 
               <span className="risk-level-label">
-                CURRENT RISK LEVEL
+                CURRENT AI RISK LEVEL
               </span>
 
               <h3>
@@ -383,9 +691,9 @@ function RiskAnalysis() {
 
                 {walletAddress
                   ? riskScore !== null
-                    ? 'Risk is currently estimated from your collateral and borrowing position.'
-                    : 'You currently have no active collateral position.'
-                  : 'Connect your wallet to calculate your current borrowing and collateral risk.'}
+                    ? 'Risk is estimated by the trained Random Forest model using your current lending position.'
+                    : recommendation || 'No active borrowing position.'
+                  : 'Connect your wallet to run AI risk analysis on your current lending position.'}
 
               </p>
 
@@ -436,15 +744,15 @@ function RiskAnalysis() {
           <p className="risk-stat-description">
 
             {walletAddress
-              ? 'Higher health factor generally indicates a safer borrowing position.'
-              : 'Connect your wallet to calculate your health factor.'}
+              ? 'Protocol health factor read directly from the LendingPool contract.'
+              : 'Connect your wallet to read your protocol health factor.'}
 
           </p>
 
         </div>
 
 
-        {/* Liquidation Risk */}
+        {/* AI Risk Level */}
 
         <div className="risk-stat-card">
 
@@ -453,25 +761,19 @@ function RiskAnalysis() {
             <div>
 
               <p className="risk-card-label">
-                LIQUIDATION RISK
+                AI RISK LEVEL
               </p>
 
               <h3>
-
                 {riskScore === null
                   ? '--'
-                  : riskScore >= 80
-                    ? 'High'
-                    : riskScore >= 60
-                      ? 'Medium'
-                      : 'Low'}
-
+                  : riskLevel}
               </h3>
 
             </div>
 
             <div className="risk-stat-icon">
-              !
+              AI
             </div>
 
           </div>
@@ -491,8 +793,9 @@ function RiskAnalysis() {
 
           <p className="risk-stat-description">
 
-            Estimated from your current collateral
-            and borrowing position.
+            {riskScore === null
+              ? 'AI analysis will appear after a borrowing position is detected.'
+              : 'Classification generated by the Random Forest risk model.'}
 
           </p>
 
@@ -516,7 +819,7 @@ function RiskAnalysis() {
             </p>
 
             <h2>
-              Your Collateral Position
+              Your Lending Position
             </h2>
 
           </div>
@@ -525,7 +828,9 @@ function RiskAnalysis() {
           <span className="risk-analysis-badge">
 
             {walletAddress
-              ? 'LIVE ANALYSIS'
+              ? riskScore !== null
+                ? 'AI ANALYSIS COMPLETE'
+                : 'NO ACTIVE BORROWING'
               : 'CONNECT WALLET'}
 
           </span>
@@ -535,6 +840,8 @@ function RiskAnalysis() {
 
         <div className="position-analysis-grid">
 
+
+          {/* Collateral */}
 
           <div className="analysis-stat">
 
@@ -555,24 +862,49 @@ function RiskAnalysis() {
           </div>
 
 
+          {/* Collateral USD */}
+
           <div className="analysis-stat">
 
             <span>
-              Borrowed
+              Collateral Value
             </span>
 
             <strong>
               {walletAddress
-                ? `${formatNumber(borrowed, 6)} ETH`
-                : '-- ETH'}
+                ? `$${formatNumber(collateralUSD, 2)}`
+                : '--'}
             </strong>
 
             <small>
-              Outstanding borrowed amount
+              Protocol-reported USD value
             </small>
 
           </div>
 
+
+          {/* Borrowed */}
+
+          <div className="analysis-stat">
+
+            <span>
+              Current Debt
+            </span>
+
+            <strong>
+              {walletAddress
+                ? `${formatNumber(borrowed, 6)} USDC`
+                : '-- USDC'}
+            </strong>
+
+            <small>
+              Principal plus accrued interest
+            </small>
+
+          </div>
+
+
+          {/* LTV */}
 
           <div className="analysis-stat">
 
@@ -583,17 +915,21 @@ function RiskAnalysis() {
             <strong>
 
               {walletAddress && ltv !== null
-                ? `${formatNumber(ltv)} %`
+                ? ltv < 0.01
+                  ? '<0.01 %'
+                  : `${formatNumber(ltv, 4)} %`
                 : '-- %'}
 
             </strong>
 
             <small>
-              Borrowed amount relative to collateral
+              Current debt relative to collateral value
             </small>
 
           </div>
 
+
+          {/* Collateral Ratio */}
 
           <div className="analysis-stat">
 
@@ -604,30 +940,57 @@ function RiskAnalysis() {
             <strong>
 
               {walletAddress && collateralRatio !== null
-                ? `${formatNumber(collateralRatio)} %`
+                ? collateralRatio > 1000
+                  ? `${(collateralRatio / 100).toFixed(0)}×`
+                  : `${formatNumber(collateralRatio, 2)} %`
                 : '-- %'}
 
             </strong>
 
             <small>
-              Collateral compared to outstanding debt
+              Collateral value compared with current debt
             </small>
 
           </div>
 
 
+          {/* Loan Duration */}
+
           <div className="analysis-stat">
 
             <span>
-              Liquidation Threshold
+              Loan Duration
             </span>
 
             <strong>
-              80 %
+              {walletAddress
+                ? `${formatNumber(loanDuration, 1)} days`
+                : '--'}
             </strong>
 
             <small>
-              Current protocol threshold
+              Time since borrowing started
+            </small>
+
+          </div>
+
+
+          {/* Interest */}
+
+          <div className="analysis-stat">
+
+            <span>
+              Accrued Interest
+            </span>
+
+            <strong>
+              {walletAddress
+                ? `${formatNumber(interestUSDC, 6)} USDC`
+                : '-- USDC'}
+            </strong>
+
+            <small>
+              Current debt minus principal
             </small>
 
           </div>
@@ -635,6 +998,123 @@ function RiskAnalysis() {
         </div>
 
       </section>
+
+
+      {/* =====================================
+          AI RISK PROBABILITIES
+          ===================================== */}
+
+      {riskScore !== null && (
+
+        <section className="risk-section">
+
+          <div className="risk-section-header">
+
+            <div>
+
+              <p className="risk-card-label">
+                MODEL OUTPUT
+              </p>
+
+              <h2>
+                AI Risk Probabilities
+              </h2>
+
+            </div>
+
+          </div>
+
+
+          <div className="risk-factors-grid">
+
+            <div className="risk-factor-card">
+
+              <div className="risk-factor-icon">
+                L
+              </div>
+
+              <div>
+
+                <h3>
+                  Low Risk
+                </h3>
+
+                <p>
+                  Model probability for the Low risk class.
+                </p>
+
+              </div>
+
+              <span className="factor-status">
+                {formatNumber(
+                  probabilities.low,
+                  2
+                )}%
+              </span>
+
+            </div>
+
+
+            <div className="risk-factor-card">
+
+              <div className="risk-factor-icon">
+                M
+              </div>
+
+              <div>
+
+                <h3>
+                  Medium Risk
+                </h3>
+
+                <p>
+                  Model probability for the Medium risk class.
+                </p>
+
+              </div>
+
+              <span className="factor-status">
+                {formatNumber(
+                  probabilities.medium,
+                  2
+                )}%
+              </span>
+
+            </div>
+
+
+            <div className="risk-factor-card">
+
+              <div className="risk-factor-icon">
+                H
+              </div>
+
+              <div>
+
+                <h3>
+                  High Risk
+                </h3>
+
+                <p>
+                  Model probability for the High risk class.
+                </p>
+
+              </div>
+
+              <span className="factor-status">
+                {formatNumber(
+                  probabilities.high,
+                  2
+                )}%
+              </span>
+
+            </div>
+
+          </div>
+
+        </section>
+
+      )}
 
 
       {/* =====================================
@@ -648,7 +1128,7 @@ function RiskAnalysis() {
           <div>
 
             <p className="risk-card-label">
-              RISK FACTORS
+              AI RISK FACTORS
             </p>
 
             <h2>
@@ -661,6 +1141,66 @@ function RiskAnalysis() {
 
 
         <div className="risk-factors-grid">
+
+
+          {/* Health Factor */}
+
+          <div className="risk-factor-card">
+
+            <div className="risk-factor-icon">
+              ♥
+            </div>
+
+            <div>
+
+              <h3>
+                Health Factor
+              </h3>
+
+              <p>
+                {healthFactor !== null
+                  ? `Current protocol health factor: ${formatNumber(healthFactor, 2)}.`
+                  : 'Protocol health factor will be evaluated after wallet connection.'}
+              </p>
+
+            </div>
+
+            <span className="factor-status">
+              PROTOCOL
+            </span>
+
+          </div>
+
+
+          {/* LTV */}
+
+          <div className="risk-factor-card">
+
+            <div className="risk-factor-icon">
+              %
+            </div>
+
+            <div>
+
+              <h3>
+                Loan-to-Value
+              </h3>
+
+              <p>
+                {ltv !== null
+                  ? ltv < 0.01
+                    ? 'Current LTV is below 0.01%.'
+                    : `Current LTV is ${formatNumber(ltv, 4)}%.`
+                  : 'LTV will be calculated from collateral value and current debt.'}
+              </p>
+
+            </div>
+
+            <span className="factor-status">
+              MODEL INPUT
+            </span>
+
+          </div>
 
 
           {/* Collateral */}
@@ -678,70 +1218,15 @@ function RiskAnalysis() {
               </h3>
 
               <p>
-                Changes in the market value of your ETH
-                collateral can affect your borrowing safety.
+                {collateralUSD > 0
+                  ? `Current collateral value is approximately $${formatNumber(collateralUSD, 2)}.`
+                  : 'Collateral value will be read from the lending protocol.'}
               </p>
 
             </div>
 
             <span className="factor-status">
-              MONITOR
-            </span>
-
-          </div>
-
-
-          {/* Borrowing */}
-
-          <div className="risk-factor-card">
-
-            <div className="risk-factor-icon">
-              %
-            </div>
-
-            <div>
-
-              <h3>
-                Borrowing Ratio
-              </h3>
-
-              <p>
-                Higher borrowing relative to collateral
-                increases your liquidation exposure.
-              </p>
-
-            </div>
-
-            <span className="factor-status">
-              MONITOR
-            </span>
-
-          </div>
-
-
-          {/* Market */}
-
-          <div className="risk-factor-card">
-
-            <div className="risk-factor-icon">
-              ↕
-            </div>
-
-            <div>
-
-              <h3>
-                Market Volatility
-              </h3>
-
-              <p>
-                ETH price volatility can rapidly change
-                your collateral health.
-              </p>
-
-            </div>
-
-            <span className="factor-status">
-              MONITOR
+              MODEL INPUT
             </span>
 
           </div>
@@ -758,22 +1243,59 @@ function RiskAnalysis() {
             <div>
 
               <h3>
-                ML Risk Assessment
+                Random Forest
               </h3>
 
               <p>
-                The intelligent risk model will evaluate
-                your position and estimate potential risk
-                once the backend model is connected.
+                The trained ML model classifies the lending position
+                into Low, Medium or High risk.
               </p>
 
             </div>
 
             <span className="factor-status">
-              READY
+              {riskScore !== null
+                ? 'ACTIVE'
+                : 'READY'}
             </span>
 
           </div>
+
+
+          {/* Dynamic AI factors */}
+
+          {riskFactors.map(
+            (factor, index) => (
+
+              <div
+                className="risk-factor-card"
+                key={`${factor}-${index}`}
+              >
+
+                <div className="risk-factor-icon">
+                  !
+                </div>
+
+                <div>
+
+                  <h3>
+                    AI Risk Signal
+                  </h3>
+
+                  <p>
+                    {factor}
+                  </p>
+
+                </div>
+
+                <span className="factor-status">
+                  AI
+                </span>
+
+              </div>
+
+            )
+          )}
 
         </div>
 
@@ -794,23 +1316,16 @@ function RiskAnalysis() {
         <div>
 
           <p className="risk-card-label">
-            RISK RECOMMENDATION
+            AI RISK RECOMMENDATION
           </p>
 
 
           <h3>
 
             {walletAddress
-              ? riskScore !== null
-                ? riskScore <= 30
-                  ? 'Your position currently appears healthy'
-                  : riskScore <= 60
-                    ? 'Monitor your borrowing position'
-                    : riskScore <= 80
-                      ? 'Consider reducing your borrowing exposure'
-                      : 'High risk — review your borrowing position'
-                : 'No active borrowing position'
-              : 'Connect your wallet to begin analysis'}
+              ? recommendation ||
+                'Run the AI analysis to receive a recommendation.'
+              : 'Connect your wallet to begin AI risk analysis.'}
 
           </h3>
 
@@ -818,8 +1333,10 @@ function RiskAnalysis() {
           <p>
 
             {walletAddress
-              ? 'Your collateral and borrowing data are being read from the LendingPool smart contract. Advanced ML-based risk analysis can be connected later.'
-              : 'Once your wallet is connected, DeFiLend will analyze your collateral, borrowed amount and position metrics.'}
+              ? riskScore !== null
+                ? 'This recommendation is generated from the current blockchain position and the trained Random Forest risk model.'
+                : 'Your blockchain position has been loaded, but there is no active borrowing position to analyze.'
+              : 'The AI service will analyze your actual LendingPool position after your wallet is connected.'}
 
           </p>
 
@@ -870,5 +1387,6 @@ function RiskAnalysis() {
     </div>
   )
 }
+
 
 export default RiskAnalysis
