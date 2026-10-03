@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   BrowserProvider,
   Contract,
@@ -7,7 +7,7 @@ import {
   MaxUint256,
 } from 'ethers'
 
-import { connectWallet } from '../utils/wallet'
+import { useWallet } from '../context/WalletContext'
 
 import {
   LENDING_POOL_ADDRESS,
@@ -19,7 +19,7 @@ import { predictRisk } from '../utils/riskApi'
 
 function RiskAnalysis() {
 
-  const [walletAddress, setWalletAddress] = useState('')
+  const { walletAddress, walletError } = useWallet()
 
   const [collateral, setCollateral] = useState(0)
   const [borrowed, setBorrowed] = useState(0)
@@ -47,7 +47,6 @@ function RiskAnalysis() {
 
   const [loading, setLoading] = useState(false)
 
-  const [walletError, setWalletError] = useState('')
 
   const [statusMessage, setStatusMessage] = useState('')
 
@@ -501,50 +500,50 @@ function RiskAnalysis() {
   // Connect wallet
   // =========================================
 
-  const handleConnectWallet = async () => {
+    useEffect(() => {
+    if (!walletAddress) {
+      setCollateral(0)
+      setBorrowed(0)
+      setCollateralUSD(0)
+      setLtv(null)
+      setCollateralRatio(null)
+      setHealthFactor(null)
+      setLoanDuration(0)
+      setInterestUSDC(0)
 
-    try {
+      setRiskScore(null)
+      setRiskLevel('Awaiting Analysis')
 
-      setLoading(true)
+      setProbabilities({
+        low: null,
+        medium: null,
+        high: null,
+      })
 
-      setWalletError('')
-
+      setRiskFactors([])
+      setRecommendation('')
       setStatusMessage('')
 
-
-      const wallet =
-        await connectWallet()
-
-
-      setWalletAddress(
-        wallet.address
-      )
-
-
-      await loadRiskData(
-        wallet.address
-      )
-
-    } catch (error) {
-
-      console.error(
-        'Risk analysis error:',
-        error
-      )
-
-
-      setWalletError(
-        error?.message ||
-        'Failed to load risk analysis.'
-      )
-
-    } finally {
-
-      setLoading(false)
-
+      return
     }
 
-  }
+    const runAnalysis = async () => {
+      try {
+        setLoading(true)
+        setStatusMessage('')
+        await loadRiskData(walletAddress)
+      } catch (error) {
+        console.error('Risk analysis error:', error)
+        setStatusMessage(
+          error?.message || 'Failed to load risk analysis.'
+        )
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    runAnalysis()
+  }, [walletAddress])
 
 
   return (
@@ -1342,23 +1341,6 @@ function RiskAnalysis() {
 
         </div>
 
-
-        {!walletAddress && (
-
-          <button
-            type="button"
-            className="wallet-btn"
-            onClick={handleConnectWallet}
-            disabled={loading}
-          >
-
-            {loading
-              ? 'Connecting...'
-              : 'Connect Wallet'}
-
-          </button>
-
-        )}
 
       </section>
 

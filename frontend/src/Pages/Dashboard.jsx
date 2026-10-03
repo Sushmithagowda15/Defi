@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   BrowserProvider,
@@ -8,7 +8,7 @@ import {
   formatUnits,
 } from 'ethers'
 
-import { connectWallet } from '../utils/wallet'
+import { useWallet } from '../context/WalletContext'
 
 import {
   LENDING_POOL_ADDRESS,
@@ -20,17 +20,17 @@ function Dashboard() {
 
   const navigate = useNavigate()
 
-  const [walletAddress, setWalletAddress] = useState('')
+  const { walletAddress, walletError } = useWallet()
+
   const [walletBalance, setWalletBalance] = useState('0')
   const [collateral, setCollateral] = useState('0')
   const [borrowed, setBorrowed] = useState('0')
-const [collateralValueUsd, setCollateralValueUsd] =
-  useState('0')
-const [healthFactor, setHealthFactor] =
-  useState(null)
-const [hasPosition, setHasPosition] = useState(false)
+  const [collateralValueUsd, setCollateralValueUsd] =
+    useState('0')
+  const [healthFactor, setHealthFactor] =
+    useState(null)
+  const [hasPosition, setHasPosition] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [walletError, setWalletError] = useState('')
 
 
   /* ================================
@@ -142,64 +142,30 @@ setHasPosition(false)
     }
 
   }
-
-
-  /* ================================
-     CONNECT WALLET
-  ================================= */
-
-  const handleConnectWallet = async () => {
-
-    try {
-
-      setLoading(true)
-
-      setWalletError('')
-
-
-      const wallet =
-        await connectWallet()
-
-
-      setWalletAddress(
-        wallet.address
-      )
-
-
-      /*
-        connectWallet() already returns
-        the wallet balance.
-      */
-
-      setWalletBalance(
-        wallet.balance || '0'
-      )
-
-
-      /*
-        Load LendingPool information.
-      */
-
-      await loadDashboardData(
-        wallet.address
-      )
-
-    } catch (error) {
-
-      console.error(error)
-
-      setWalletError(
-        error?.message ||
-        'Failed to connect wallet.'
-      )
-
-    } finally {
-
-      setLoading(false)
-
-    }
-
+useEffect(() => {
+  if (!walletAddress) {
+    setWalletBalance('0')
+    setCollateral('0')
+    setBorrowed('0')
+    setCollateralValueUsd('0')
+    setHealthFactor(null)
+    setHasPosition(false)
+    return
   }
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      await loadDashboardData(walletAddress)
+    } catch (error) {
+      console.error('Failed to load dashboard:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  loadData()
+}, [walletAddress])
 
 
   /* ================================
@@ -297,22 +263,6 @@ const utilization =
               </p>
 
             </div>
-
-
-            <button
-              type="button"
-              className="wallet-btn"
-              onClick={handleConnectWallet}
-              disabled={loading}
-            >
-
-              {loading
-                ? 'Connecting...'
-                : walletAddress
-                  ? 'Refresh Wallet'
-                  : 'Connect Wallet'}
-
-            </button>
 
           </div>
 

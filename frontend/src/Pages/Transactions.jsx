@@ -6,7 +6,7 @@ import {
   id,
 } from 'ethers'
 
-import { connectWallet } from '../utils/wallet'
+import { useWallet } from '../context/WalletContext'
 import { getLendingPool } from '../utils/contracts'
 
 const SEPOLIA_RPC_URL =
@@ -23,7 +23,7 @@ const EVENT_TOPICS = [
 ]
 
 function Transactions() {
-  const [walletAddress, setWalletAddress] = useState('')
+  const { walletAddress } = useWallet()
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -35,25 +35,25 @@ function Transactions() {
   const [totalRepaid, setTotalRepaid] = useState('0')
 
   const loadTransactions = async () => {
+    if (!walletAddress) {
+      setTransactions([])
+      setTotalSupplied('0')
+      setTotalBorrowed('0')
+      setTotalRepaid('0')
+      return
+    }
+
     try {
       setLoading(true)
       setError('')
 
-      /*
-       * Connect wallet.
-       * MetaMask is used only for the user's address.
-       * We do NOT use MetaMask's RPC for historical logs.
-       */
-      const wallet = await connectWallet()
-
-      const address = wallet.address
-
-      setWalletAddress(address)
+      const address = walletAddress
 
       /*
-       * Dedicated read-only Sepolia RPC.
-       * This avoids MetaMask eth_getLogs/RPC limitations.
-       */
+      * Dedicated read-only Sepolia RPC.
+      * This avoids MetaMask eth_getLogs/RPC limitations.
+      */
+
       const provider = new JsonRpcProvider(
         SEPOLIA_RPC_URL,
         SEPOLIA_CHAIN_ID,
@@ -401,7 +401,7 @@ function Transactions() {
 
   useEffect(() => {
     loadTransactions()
-  }, [])
+  }, [walletAddress])
 
   const handleFilterChange = (event) => {
     setFilter(event.target.value)

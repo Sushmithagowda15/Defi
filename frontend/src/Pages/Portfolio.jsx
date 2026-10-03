@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
 import {
+  BrowserProvider,
   formatEther,
   formatUnits,
   MaxUint256
-} from 'ethers'
+  } from 'ethers'
 
-import { connectWallet } from '../utils/wallet'
+import { useWallet } from '../context/WalletContext'
 import { getLendingPool } from '../utils/contracts'
 
 function Portfolio() {
-  const [walletAddress, setWalletAddress] = useState('')
+  const { walletAddress, walletError } = useWallet()
   const [ethBalance, setEthBalance] = useState('0')
   const [supplied, setSupplied] = useState('0')
   const [borrowed, setBorrowed] = useState('0')
@@ -17,22 +18,20 @@ function Portfolio() {
   const [healthFactor, setHealthFactor] = useState(null)
   const [hasPosition, setHasPosition] = useState(false)
 
-  const [walletError, setWalletError] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
   const loadPortfolio = async () => {
+    if (!walletAddress || !window.ethereum) {
+      return
+    }
+
     try {
       setIsLoading(true)
-      setWalletError('')
       setStatusMessage('')
 
-      const wallet = await connectWallet()
-
-      const provider = wallet.provider
-      const address = wallet.address
-
-      setWalletAddress(address)
+      const provider = new BrowserProvider(window.ethereum)
+      const address = walletAddress
 
       // Wallet ETH balance
       const balanceWei =
@@ -127,7 +126,7 @@ function Portfolio() {
         error
       )
 
-      setWalletError(
+      setStatusMessage(
         error?.shortMessage ||
         error?.reason ||
         error?.message ||
@@ -146,8 +145,18 @@ function Portfolio() {
   }
 
   useEffect(() => {
+    if (!walletAddress) {
+      setEthBalance('0')
+      setSupplied('0')
+      setBorrowed('0')
+      setCollateralValue('0')
+      setHealthFactor(null)
+      setHasPosition(false)
+      return
+    }
+
     loadPortfolio()
-  }, [])
+  }, [walletAddress])
 
   const suppliedNumber =
     Number(supplied) || 0
@@ -430,18 +439,6 @@ function Portfolio() {
               : 'Connect your wallet and supply ETH or borrow USDC to create a lending position.'}
           </p>
 
-          {!hasPosition && !walletAddress && (
-            <button
-              className="wallet-btn"
-              onClick={loadPortfolio}
-              disabled={isLoading}
-            >
-              {isLoading
-                ? 'Connecting...'
-                : 'Connect Wallet'}
-            </button>
-          )}
-
           {!hasPosition && walletAddress && (
             <button
               className="wallet-btn"
@@ -452,6 +449,7 @@ function Portfolio() {
               Start Lending
             </button>
           )}
+
 
         </div>
 

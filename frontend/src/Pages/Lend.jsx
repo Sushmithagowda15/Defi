@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   BrowserProvider,
   Contract,
@@ -6,7 +6,7 @@ import {
   formatEther,
 } from 'ethers'
 
-import { connectWallet } from '../utils/wallet'
+import { useWallet } from '../context/WalletContext'
 
 import {
   LENDING_POOL_ADDRESS,
@@ -16,14 +16,13 @@ import {
 
 function Lend() {
 
-  const [walletAddress, setWalletAddress] = useState('')
+  const { walletAddress, walletError } = useWallet()
   const [walletBalance, setWalletBalance] = useState('')
 
   const [amount, setAmount] = useState('')
   const [suppliedAmount, setSuppliedAmount] = useState('0')
   const [interestRate, setInterestRate] = useState('0')
 
-  const [walletError, setWalletError] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -94,57 +93,41 @@ function Lend() {
   }
 
 
-  // =========================================
-  // CONNECT WALLET
-  // =========================================
-
-  const handleConnectWallet = async () => {
-
-    try {
-
-      setWalletError('')
-      setStatusMessage('')
-      setLoading(true)
-
-
-      const wallet =
-        await connectWallet()
-
-
-      setWalletAddress(
-        wallet.address
-      )
-
-
-      setWalletBalance(
-        wallet.balance || '0'
-      )
-
-
-      await loadLendingPosition(
-        wallet.address
-      )
-
-    } catch (error) {
-
-      console.error(
-        'Wallet connection failed:',
-        error
-      )
-
-
-      setWalletError(
-        error?.message ||
-        'Failed to connect wallet.'
-      )
-
-    } finally {
-
-      setLoading(false)
-
+    useEffect(() => {
+    if (!walletAddress) {
+      setWalletBalance('')
+      setSuppliedAmount('0')
+      setInterestRate('0')
+      return
     }
 
-  }
+    const loadWalletData = async () => {
+      try {
+        setLoading(true)
+
+        if (!window.ethereum) {
+          return
+        }
+
+        const provider = new BrowserProvider(window.ethereum)
+
+        const balance = await provider.getBalance(walletAddress)
+
+        setWalletBalance(formatEther(balance))
+
+        await loadLendingPosition(walletAddress)
+      } catch (error) {
+        console.error('Failed to load wallet data:', error)
+        setStatusMessage(
+          error?.message || 'Failed to load wallet data.'
+        )
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadWalletData()
+  }, [walletAddress])
 
 
   // =========================================
@@ -159,9 +142,7 @@ function Lend() {
 
     if (!walletAddress) {
 
-      setWalletError(
-        'Connect your wallet first.'
-      )
+      setStatusMessage('Connect your wallet first.')
 
       return
 
@@ -170,10 +151,7 @@ function Lend() {
 
     if (!walletBalance) {
 
-      setWalletError(
-        'Wallet balance is unavailable.'
-      )
-
+      setStatusMessage('Wallet balance is unavailable.')
       return
 
     }
@@ -185,9 +163,7 @@ function Lend() {
 
     if (balance <= 0) {
 
-      setWalletError(
-        'Your wallet does not have enough ETH.'
-      )
+      setStatusMessage('Your wallet does not have enough ETH.')
 
       return
 
@@ -336,9 +312,7 @@ function Lend() {
 
       if (!window.ethereum) {
 
-        setWalletError(
-          'MetaMask is not installed.'
-        )
+        setStatusMessage('MetaMask is not installed.')
 
         return
 
@@ -350,11 +324,8 @@ function Lend() {
       // ---------------------------------------
 
       if (!walletAddress) {
-
-        await handleConnectWallet()
-
+        setStatusMessage('Connect your wallet from the top navigation first.')
         return
-
       }
 
 
@@ -367,9 +338,7 @@ function Lend() {
         Number(amount) <= 0
       ) {
 
-        setWalletError(
-          'Please enter an ETH amount.'
-        )
+        setStatusMessage('Please enter an ETH amount.')
 
         return
 
@@ -401,9 +370,7 @@ function Lend() {
 
       if (enteredAmount > balance) {
 
-        setWalletError(
-          'Amount exceeds your available ETH balance.'
-        )
+        setStatusMessage('Amount exceeds your available ETH balance.')
 
         return
 
@@ -818,11 +785,7 @@ function Lend() {
             disabled={loading}
           >
 
-            {loading
-              ? 'Processing...'
-              : walletAddress
-                ? 'Supply ETH'
-                : 'Connect Wallet'}
+            {loading ? 'Processing...' : 'Supply ETH'}
 
           </button>
 
