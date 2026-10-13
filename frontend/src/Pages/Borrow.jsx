@@ -269,21 +269,22 @@ function Borrow() {
 
 
 
-      const maxBorrowAmount =
+      
+const maxBorrowAmount =
+  await lendingPool.getMaxBorrowAmount(address)
 
-        await lendingPool.getMaxBorrowAmount(address)
+// getMaxBorrowAmount returns total capacity.
+// Subtract existing debt to calculate remaining capacity.
+const availableBorrowAmount =
+  maxBorrowAmount > currentDebt
+    ? maxBorrowAmount - currentDebt
+    : 0n
 
+const formattedMaxBorrow =
+  formatUnits(availableBorrowAmount, 6)
 
+setMaxBorrow(formattedMaxBorrow)
 
-      const formattedMaxBorrow =
-
-        formatUnits(
-
-          maxBorrowAmount,
-
-          6
-
-        )
 
 
 
@@ -826,6 +827,25 @@ function Borrow() {
 
         )
 
+        
+const network = await provider.getNetwork()
+
+if (network.chainId !== 11155111n) {
+  throw new Error(
+    'Please switch MetaMask to the Sepolia network.'
+  )
+}
+
+const deployedCode =
+  await provider.getCode(LENDING_POOL_ADDRESS)
+
+if (deployedCode === '0x') {
+  throw new Error(
+    'No contract is deployed at the configured LendingPool address on Sepolia.'
+  )
+}
+
+
 
 
 
@@ -941,6 +961,15 @@ function Borrow() {
           6
 
         )
+        
+setStatusMessage(
+  'Checking borrowing conditions...'
+)
+
+// Simulate the transaction first to expose contract reverts
+// before asking MetaMask to submit a transaction.
+await lendingPool.borrow.staticCall(amountInUSDC)
+
 
 
 
@@ -1133,14 +1162,6 @@ function Borrow() {
 
 
       setStatusMessage(message)
-
-
-
-      setStatusMessage('')
-
-
-
-
 
     } finally {
 

@@ -8,8 +8,7 @@ import lendingPoolArtifact from './LendingPool.json'
 export const LENDING_POOL_ADDRESS =
   '0xc7EF79cA55309fB0C35267142CF771D41e6d9076'
 
-export const MOCK_USDC_ADDRESS =
-  '0x23608F17D934DEb9B2bCE910B3160690A038ebfA'
+export const MOCK_USDC_ADDRESS = "0x23608f17d934deb9b2bce910b3160690a038ebfa";
 
 // =====================================================
 // LendingPool
