@@ -1,5 +1,6 @@
 import { NavLink, Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
+import AIChatbot from './Components/AIChatbot'
 
 import { useWallet } from './context/WalletContext'
 
@@ -339,6 +340,8 @@ function DashboardLayout() {
         </main>
 
       </div>
+
+      <AIChatbot />
 
     </div>
   )
