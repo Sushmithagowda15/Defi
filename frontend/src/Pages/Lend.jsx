@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   BrowserProvider,
   Contract,
   parseEther,
   formatEther,
+  parseUnits,
+  formatUnits,
 } from 'ethers'
 
-import { connectWallet } from '../utils/wallet'
+import { useWallet } from '../context/WalletContext'
 
 import {
   LENDING_POOL_ADDRESS,
@@ -16,14 +18,17 @@ import {
 
 function Lend() {
 
-  const [walletAddress, setWalletAddress] = useState('')
+  const { walletAddress, walletError } = useWallet()
+  const [formError, setFormError] = useState('')
   const [walletBalance, setWalletBalance] = useState('')
 
   const [amount, setAmount] = useState('')
+  const [withdrawAmount, setWithdrawAmount] = useState('')
   const [suppliedAmount, setSuppliedAmount] = useState('0')
+  const [borrowAmount, setBorrowAmount] = useState('')
+  const [borrowedAmount, setBorrowedAmount] = useState('0')
   const [interestRate, setInterestRate] = useState('0')
 
-  const [walletError, setWalletError] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -94,57 +99,48 @@ function Lend() {
   }
 
 
-  // =========================================
-  // CONNECT WALLET
-  // =========================================
-
-  const handleConnectWallet = async () => {
-
-    try {
-
-      setWalletError('')
-      setStatusMessage('')
-      setLoading(true)
-
-
-      const wallet =
-        await connectWallet()
-
-
-      setWalletAddress(
-        wallet.address
-      )
-
-
-      setWalletBalance(
-        wallet.balance || '0'
-      )
-
-
-      await loadLendingPosition(
-        wallet.address
-      )
-
-    } catch (error) {
-
-      console.error(
-        'Wallet connection failed:',
-        error
-      )
-
-
-      setWalletError(
-        error?.message ||
-        'Failed to connect wallet.'
-      )
-
-    } finally {
-
-      setLoading(false)
-
+    useEffect(() => {
+      console.log('Lend effect started; wallet:', walletAddress)
+    if (!walletAddress) {
+      setWalletBalance('')
+      setSuppliedAmount('0')
+      setInterestRate('0')
+      return
     }
 
-  }
+    const loadWalletData = async () => {
+      try {
+        setLoading(true)
+
+        if (!window.ethereum) {
+          return
+        }
+
+        const provider = new BrowserProvider(window.ethereum)
+
+        const network = await provider.getNetwork()
+        const balance = await provider.getBalance(walletAddress)
+
+        console.log('Wallet address:', walletAddress)
+        console.log('Network chain ID:', network.chainId.toString())
+        console.log('Raw ETH balance:', balance.toString())
+        console.log('Formatted ETH balance:', formatEther(balance))
+
+        setWalletBalance(formatEther(balance))
+
+        await loadLendingPosition(walletAddress)
+      } catch (error) {
+        console.error('Failed to load wallet data:', error)
+        setStatusMessage(
+          error?.message || 'Failed to load wallet data.'
+        )
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadWalletData()
+  }, [walletAddress])
 
 
   // =========================================
@@ -153,15 +149,13 @@ function Lend() {
 
   const handleMax = () => {
 
-    setWalletError('')
+    setFormError('')
     setStatusMessage('')
 
 
     if (!walletAddress) {
 
-      setWalletError(
-        'Connect your wallet first.'
-      )
+      setStatusMessage('Connect your wallet first.')
 
       return
 
@@ -170,10 +164,7 @@ function Lend() {
 
     if (!walletBalance) {
 
-      setWalletError(
-        'Wallet balance is unavailable.'
-      )
-
+      setStatusMessage('Wallet balance is unavailable.')
       return
 
     }
@@ -185,9 +176,7 @@ function Lend() {
 
     if (balance <= 0) {
 
-      setWalletError(
-        'Your wallet does not have enough ETH.'
-      )
+      setStatusMessage('Your wallet does not have enough ETH.')
 
       return
 
@@ -218,7 +207,7 @@ function Lend() {
 
     if (maxAmount <= 0) {
 
-      setWalletError(
+      setFormError(
         'Your ETH balance is too low to supply while keeping gas.'
       )
 
@@ -246,7 +235,7 @@ function Lend() {
 
     setAmount(value)
 
-    setWalletError('')
+    setFormError('')
     setStatusMessage('')
 
 
@@ -268,7 +257,7 @@ function Lend() {
       enteredAmount <= 0
     ) {
 
-      setWalletError(
+      setFormError(
         'Please enter an amount greater than 0.'
       )
 
@@ -284,7 +273,7 @@ function Lend() {
 
     if (enteredAmount > balance) {
 
-      setWalletError(
+      setFormError(
         'Amount exceeds your available ETH balance.'
       )
 
@@ -309,7 +298,7 @@ function Lend() {
       balance - gasReserve
     ) {
 
-      setWalletError(
+      setFormError(
         `Keep at least ${gasReserve} ETH for gas fees.`
       )
 
@@ -324,7 +313,7 @@ function Lend() {
 
   const handleSupply = async () => {
 
-    setWalletError('')
+    setFormError('')
     setStatusMessage('')
 
 
@@ -336,9 +325,7 @@ function Lend() {
 
       if (!window.ethereum) {
 
-        setWalletError(
-          'MetaMask is not installed.'
-        )
+        setStatusMessage('MetaMask is not installed.')
 
         return
 
@@ -350,11 +337,8 @@ function Lend() {
       // ---------------------------------------
 
       if (!walletAddress) {
-
-        await handleConnectWallet()
-
+        setStatusMessage('Connect your wallet from the top navigation first.')
         return
-
       }
 
 
@@ -367,9 +351,7 @@ function Lend() {
         Number(amount) <= 0
       ) {
 
-        setWalletError(
-          'Please enter an ETH amount.'
-        )
+        setStatusMessage('Please enter an ETH amount.')
 
         return
 
@@ -386,7 +368,7 @@ function Lend() {
 
       if (!Number.isFinite(enteredAmount)) {
 
-        setWalletError(
+        setFormError(
           'Please enter a valid ETH amount.'
         )
 
@@ -401,9 +383,7 @@ function Lend() {
 
       if (enteredAmount > balance) {
 
-        setWalletError(
-          'Amount exceeds your available ETH balance.'
-        )
+        setStatusMessage('Amount exceeds your available ETH balance.')
 
         return
 
@@ -423,7 +403,7 @@ function Lend() {
         balance - gasReserve
       ) {
 
-        setWalletError(
+        setFormError(
           `You need to keep at least ${gasReserve} ETH for gas fees.`
         )
 
@@ -576,13 +556,13 @@ function Lend() {
         error?.code === 4001
       ) {
 
-        setWalletError(
+        setFormError(
           'Transaction rejected in MetaMask.'
         )
 
       } else {
 
-        setWalletError(
+        setFormError(
           error?.reason ||
           error?.shortMessage ||
           error?.message ||
@@ -598,6 +578,94 @@ function Lend() {
     }
 
   }
+
+  
+  // =========================================
+  // WITHDRAW COLLATERAL
+  // =========================================
+
+  const handleWithdraw = async () => {
+    setFormError('')
+    setStatusMessage('')
+    setLoading(true)
+
+    try {
+      if (!window.ethereum) {
+        setFormError('MetaMask is not installed.')
+        return
+      }
+
+      if (!walletAddress) {
+        setFormError('Connect your wallet first.')
+        return
+      }
+
+      if (
+        !withdrawAmount ||
+        !Number.isFinite(Number(withdrawAmount)) ||
+        Number(withdrawAmount) <= 0
+      ) {
+        setFormError('Enter a withdrawal amount greater than zero.')
+        return
+      }
+
+      if (Number(withdrawAmount) > Number(suppliedAmount)) {
+        setFormError('Withdrawal amount exceeds your supplied collateral.')
+        return
+      }
+
+      const provider = new BrowserProvider(window.ethereum)
+      const network = await provider.getNetwork()
+
+      if (network.chainId !== 11155111n) {
+        setFormError('Switch MetaMask to Sepolia before withdrawing.')
+        return
+      }
+
+      const signer = await provider.getSigner()
+
+      const lendingPool = new Contract(
+        LENDING_POOL_ADDRESS,
+        LENDING_POOL_ABI,
+        signer
+      )
+
+      const transaction = await lendingPool.withdrawCollateral(
+        parseEther(withdrawAmount)
+      )
+
+      setStatusMessage(
+        'Withdrawal submitted. Waiting for confirmation...'
+      )
+
+      await transaction.wait()
+
+      setStatusMessage('Collateral withdrawn successfully!')
+      setWithdrawAmount('')
+
+      const updatedBalance = await provider.getBalance(walletAddress)
+      setWalletBalance(formatEther(updatedBalance))
+
+      await loadLendingPosition(walletAddress)
+
+    } catch (error) {
+      console.error('Withdraw transaction failed:', error)
+
+      if (error?.code === 'ACTION_REJECTED' || error?.code === 4001) {
+        setFormError('Transaction rejected in MetaMask.')
+      } else {
+        setFormError(
+          error?.reason ||
+          error?.shortMessage ||
+          error?.message ||
+          'Withdrawal failed.'
+        )
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
 
 
   // =========================================
@@ -755,6 +823,60 @@ function Lend() {
 
             </div>
 
+          
+          </div>
+
+
+          {/* WITHDRAW COLLATERAL */}
+
+          <div className="amount-section">
+
+            <div className="amount-label-row">
+
+              <label>
+                Amount to Withdraw
+              </label>
+
+              <span>
+                Supplied: {formattedSuppliedAmount} ETH
+              </span>
+
+            </div>
+
+            <div className="amount-input">
+
+              <input
+                type="number"
+                placeholder="0.00"
+                min="0"
+                step="0.000001"
+                value={withdrawAmount}
+                onChange={(e) => setWithdrawAmount(e.target.value)}
+              />
+
+              <button
+                type="button"
+                className="asset-selector"
+                onClick={() => setWithdrawAmount(suppliedAmount)}
+              >
+                <span>Ξ</span>
+                ETH
+                <span className="selector-arrow">
+                  MAX
+                </span>
+              </button>
+
+            </div>
+
+            <button
+              type="button"
+              className="lend-submit-btn"
+              onClick={handleWithdraw}
+              disabled={loading}
+            >
+              {loading ? 'Processing...' : 'Withdraw ETH'}
+            </button>
+
           </div>
 
 
@@ -818,11 +940,7 @@ function Lend() {
             disabled={loading}
           >
 
-            {loading
-              ? 'Processing...'
-              : walletAddress
-                ? 'Supply ETH'
-                : 'Connect Wallet'}
+            {loading ? 'Processing...' : 'Supply ETH'}
 
           </button>
 
@@ -844,12 +962,12 @@ function Lend() {
           )}
 
 
-          {/* ERROR */}
+        {/* ERROR */}
 
-          {walletError && (
+          {(walletError || formError) && (
 
             <p className="wallet-error">
-              {walletError}
+              {walletError || formError}
             </p>
 
           )}
@@ -870,6 +988,7 @@ function Lend() {
 
           {!walletAddress &&
             !walletError &&
+            !formError &&
             !statusMessage && (
 
               <p className="transaction-note">

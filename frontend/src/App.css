@@ -5130,13 +5130,20 @@ textarea:focus-visible {
   white-space: nowrap;
 }
 
-
 /* =========================================================
    TABLE
    ========================================================= */
 
 .transaction-table {
   width: 100%;
+
+  overflow-x: auto;
+
+  overflow-y: hidden;
+
+  scrollbar-width: thin;
+
+  scrollbar-color: #303a54 #0b111c;
 }
 
 .transaction-table-header {
@@ -5145,21 +5152,27 @@ textarea:focus-visible {
   grid-template-columns:
     1.1fr
     0.8fr
+    1.4fr
     1fr
-    1fr
-    1.1fr
-    1.2fr;
+    1.5fr
+    1.3fr;
 
-  gap: 15px;
+  gap: 18px;
+
+  min-width: 900px;
 
   padding: 13px 23px;
 
   border-bottom: 1px solid #1d2535;
 
   background: rgba(9, 14, 24, 0.7);
+
+  box-sizing: border-box;
 }
 
 .transaction-table-header span {
+  min-width: 0;
+
   color: #505d74;
 
   font-size: 7px;
@@ -5167,6 +5180,182 @@ textarea:focus-visible {
   font-weight: 750;
 
   letter-spacing: 0.8px;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   TRANSACTION ROWS
+   ========================================================= */
+
+.transaction-rows {
+  width: 100%;
+}
+
+.transaction-row {
+  display: grid;
+
+  grid-template-columns:
+    1.1fr
+    0.8fr
+    1.4fr
+    1fr
+    1.5fr
+    1.3fr;
+
+  align-items: center;
+
+  gap: 18px;
+
+  min-width: 900px;
+
+  padding: 17px 23px;
+
+  border-bottom: 1px solid #1b2333;
+
+  background: transparent;
+
+  box-sizing: border-box;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.transaction-row:last-child {
+  border-bottom: none;
+}
+
+.transaction-row:hover {
+  background: rgba(87, 73, 220, 0.045);
+
+  border-bottom-color: #2a3150;
+}
+
+.transaction-row span,
+.transaction-row strong,
+.transaction-row a {
+  min-width: 0;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   TRANSACTION TYPE
+   ========================================================= */
+
+.transaction-row span:first-child {
+  color: #cbd2df;
+
+  font-size: 9px;
+
+  font-weight: 650;
+}
+
+
+/* =========================================================
+   ASSET
+   ========================================================= */
+
+.transaction-row span:nth-child(2) {
+  color: #7e8ba3;
+
+  font-size: 9px;
+
+  font-weight: 600;
+}
+
+
+/* =========================================================
+   AMOUNT
+   ========================================================= */
+
+.transaction-row strong {
+  color: #e2e6ef;
+
+  font-size: 9px;
+
+  font-weight: 650;
+}
+
+
+/* =========================================================
+   STATUS
+   ========================================================= */
+
+.transaction-row span:nth-child(4) {
+  color: #55c7a1;
+
+  font-size: 8px;
+
+  font-weight: 650;
+}
+
+
+/* =========================================================
+   DATE
+   ========================================================= */
+
+.transaction-row span:nth-child(5) {
+  color: #69768c;
+
+  font-size: 8px;
+}
+
+
+/* =========================================================
+   TRANSACTION HASH
+   ========================================================= */
+
+.transaction-row a {
+  display: block;
+
+  color: #8075ed;
+
+  font-size: 8px;
+
+  font-weight: 600;
+
+  text-decoration: none;
+
+  transition:
+    color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.transaction-row a:hover {
+  color: #a39bff;
+
+  text-decoration: underline;
+}
+
+
+/* =========================================================
+   TABLE SCROLLBAR
+   ========================================================= */
+
+.transaction-table::-webkit-scrollbar {
+  height: 6px;
+}
+
+.transaction-table::-webkit-scrollbar-track {
+  background: #0b111c;
+}
+
+.transaction-table::-webkit-scrollbar-thumb {
+  background: #303a54;
+
+  border-radius: 10px;
+}
+
+.transaction-table::-webkit-scrollbar-thumb:hover {
+  background: #4a5575;
 }
 
 
@@ -5316,12 +5505,12 @@ textarea:focus-visible {
     overflow-x: auto;
   }
 
-  .transaction-table-header {
-    min-width: 750px;
+  .transaction-table-header,
+  .transaction-row {
+    min-width: 900px;
   }
 
 }
-
 
 @media (max-width: 700px) {
 
@@ -6124,4 +6313,200 @@ textarea:focus-visible {
     grid-template-columns: 1fr;
   }
 
+}
+
+
+/* =========================================
+   DEFI LENDING AI CHATBOT
+   ========================================= */
+
+.ai-chatbot {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1000;
+  font-family: inherit;
+}
+
+.ai-chat-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border: 1px solid rgba(167, 139, 250, 0.45);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #7c3aed, #5b21b6);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 30px rgba(91, 33, 182, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ai-chat-toggle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px rgba(91, 33, 182, 0.45);
+}
+
+.ai-chat-window {
+  display: flex;
+  flex-direction: column;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  height: 500px;
+  max-height: calc(100vh - 110px);
+  margin-bottom: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  border-radius: 18px;
+  background: #11111b;
+  color: #f4f2ff;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+}
+
+.ai-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 17px 18px;
+  background: linear-gradient(135deg, #292044, #191426);
+  border-bottom: 1px solid rgba(167, 139, 250, 0.18);
+}
+
+.ai-chat-header strong {
+  display: block;
+  font-size: 15px;
+}
+
+.ai-chat-header small {
+  display: block;
+  margin-top: 4px;
+  color: #b7adc9;
+  font-size: 12px;
+}
+
+.ai-chat-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 23px;
+  cursor: pointer;
+}
+
+.ai-chat-messages {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.ai-chat-message {
+  max-width: 90%;
+  padding: 11px 13px;
+  border-radius: 13px;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ai-chat-message.assistant {
+  align-self: flex-start;
+  border: 1px solid rgba(167, 139, 250, 0.15);
+  border-bottom-left-radius: 4px;
+  background: #201b30;
+  color: #e8e1f5;
+}
+
+.ai-chat-message.user {
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+  background: #6d3bd1;
+  color: #fff;
+}
+
+.ai-chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 0 14px 12px;
+}
+
+.ai-chat-suggestions button {
+  padding: 7px 10px;
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  border-radius: 999px;
+  background: transparent;
+  color: #d8c8ff;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.ai-chat-suggestions button:hover {
+  background: rgba(124, 58, 237, 0.18);
+}
+
+.ai-chat-form {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid rgba(167, 139, 250, 0.18);
+  background: #171321;
+}
+
+.ai-chat-form input {
+  min-width: 0;
+  flex: 1;
+  padding: 11px 12px;
+  border: 1px solid #393047;
+  border-radius: 10px;
+  outline: none;
+  background: #211b2d;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+}
+
+.ai-chat-form input:focus {
+  border-color: #9870ef;
+}
+
+.ai-chat-form input::placeholder {
+  color: #9b91aa;
+}
+
+.ai-chat-form button {
+  padding: 0 14px;
+  border: none;
+  border-radius: 10px;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ai-chat-form button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .ai-chatbot {
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .ai-chat-window {
+    width: calc(100vw - 24px);
+    height: min(500px, calc(100vh - 100px));
+  }
 }
