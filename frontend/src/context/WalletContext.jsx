@@ -1,4 +1,5 @@
-import { createContext, useContext, useState } from 'react'
+
+import { createContext, useContext, useEffect, useState } from 'react'
 import { connectWallet } from '../blockchain/web3'
 
 const WalletContext = createContext(null)
@@ -6,6 +7,26 @@ const WalletContext = createContext(null)
 export function WalletProvider({ children }) {
   const [walletAddress, setWalletAddress] = useState('')
   const [walletError, setWalletError] = useState('')
+
+  useEffect(() => {
+    const ethereum = window.ethereum
+
+    if (!ethereum?.on) return
+
+    const handleAccountsChanged = (accounts) => {
+      setWalletAddress(accounts?.[0] || '')
+      setWalletError('')
+    }
+
+    ethereum.on('accountsChanged', handleAccountsChanged)
+
+    return () => {
+      ethereum.removeListener?.(
+        'accountsChanged',
+        handleAccountsChanged
+      )
+    }
+  }, [])
 
   const handleConnectWallet = async () => {
     try {

@@ -3,6 +3,7 @@ import './App.css'
 import AIChatbot from './Components/AIChatbot'
 
 import { useWallet } from './context/WalletContext'
+import { useRisk } from './context/RiskContext'
 
 import Welcome from './Pages/Welcome'
 import Terms from './Pages/Terms'
@@ -20,8 +21,11 @@ function DashboardLayout() {
   const {
     walletAddress,
     walletError,
-    connectWallet
+    connectWallet,
+    disconnectWallet,
   } = useWallet()
+
+  const { setRiskData } = useRisk()
 
 
   const handleConnectWallet = async () => {
@@ -30,6 +34,11 @@ function DashboardLayout() {
     } catch (error) {
       console.error(error)
     }
+  }
+
+  const handleDisconnectWallet = () => {
+    disconnectWallet()
+    setRiskData(null)
   }
 
 
@@ -73,6 +82,16 @@ function DashboardLayout() {
               : 'Connect Wallet'}
           </button>
 
+          {walletAddress && (
+            <button
+              type="button"
+              className="wallet-disconnect-btn"
+              onClick={handleDisconnectWallet}
+              aria-label="Disconnect wallet from this application"
+            >
+              Disconnect
+            </button>
+          )}
 
           {walletError && (
             <span className="wallet-error">

@@ -1,7 +1,14 @@
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useRisk } from '../context/RiskContext'
+import { useWallet } from '../context/WalletContext'
 
 const suggestedQuestions = [
+  'What is my risk level?',
+  'What are my risk factors?',
+  'What is my current debt?',
+  'How can I improve my risk?',
+  'What is my Health Factor?',
   'What is LTV?',
   'How does collateral work?',
   'What is liquidation?',
@@ -55,6 +62,9 @@ function getAnswer(question) {
 }
 
 export default function AIChatbot() {
+  const { riskData } = useRisk()
+  const { walletAddress } = useWallet()
+
   const [isOpen, setIsOpen] = useState(false)
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState([
@@ -64,11 +74,139 @@ export default function AIChatbot() {
     },
   ])
 
+  useEffect(() => {
+    setMessages([
+      {
+        role: 'assistant',
+        text: 'Hi! I’m your DeFi Lending Assistant. Ask me about collateral, borrowing, repayment, or lending risk.',
+      },
+    ])
+  }, [walletAddress])
+
+
+  function getPersonalizedAnswer(question) {
+    const q = question.toLowerCase()
+
+    const asksPersonalRisk =
+      q.includes('my risk') ||
+      q.includes('my loan') ||
+      q.includes('current loan risk') ||
+      q.includes('current risk level') ||
+      q.includes('current risk score') ||
+      q.includes('how risky is my') ||
+      q.includes('risk factors for my') ||
+      q.includes('my risk factor') ||
+      q.includes('improve my risk') ||
+      q.includes('my debt') ||
+      q.includes('current debt') ||
+      q.includes('how much do i owe') ||
+      q.includes('how much have i borrowed') ||
+      q.includes('my interest') ||
+      q.includes('interest on my loan') ||
+      q.includes('my health factor') ||
+      q.includes('current health factor') ||
+      q.includes('my ltv') ||
+      q.includes('current ltv') ||
+      q.includes('my loan-to-value') ||
+      q.includes('my eth') ||
+      q.includes('my collateral') ||
+      q.includes('current collateral') ||
+      q.includes('value of my collateral')
+
+    if (!asksPersonalRisk) return null
+
+    if (!walletAddress) {
+      return 'Connect your wallet to view personalized risk results. I can still explain general lending concepts.'
+    }
+
+    if (
+      !riskData ||
+      !riskData.walletAddress ||
+      riskData.walletAddress.toLowerCase() !== walletAddress.toLowerCase()
+    ) {
+      return 'No current risk results are available for this wallet. Open Risk Analysis and run the analysis first.'
+    }
+
+    if (
+      q.includes('risk factor') ||
+      q.includes('recommendation') ||
+      q.includes('improve my risk') ||
+      q.includes('why') ||
+      q.includes('high risk')
+    ) {
+      const factors = riskData.riskFactors.length
+        ? riskData.riskFactors.join(' ')
+        : 'The model did not return specific risk-factor messages.'
+
+      const isAskingWhyHigh = q.includes('why') && q.includes('high')
+      const riskExplanation =
+        isAskingWhyHigh &&
+        !riskData.riskLevel.toLowerCase().includes('high')
+          ? `Your current classification is ${riskData.riskLevel}, with a score of ${riskData.riskScore}/100. The model is not currently classifying your position as high risk.`
+          : `Your current classification is ${riskData.riskLevel}, with a score of ${riskData.riskScore}/100.`
+
+      return `${riskExplanation} Risk signals: ${factors} Recommendation: ${riskData.recommendation || 'Review your collateral, debt, LTV and Health Factor.'} This model estimate does not guarantee safety.`
+    }
+
+    if (
+      q.includes('my risk') ||
+      q.includes('risk level') ||
+      q.includes('risk score') ||
+      q.includes('how risky') ||
+      q.includes('current loan risk') ||
+      q.includes('my loan risk')
+    ) {
+      return `Your latest AI risk classification is ${riskData.riskLevel}, with a score of ${riskData.riskScore}/100. This is an estimate, not a guarantee of safety.`
+    }
+
+    if (
+      q.includes('my debt') ||
+      q.includes('current debt') ||
+      q.includes('how much do i owe') ||
+      q.includes('borrowed')
+    ) {
+      return `Your original borrowed amount is ${riskData.principalBorrowedUSDC.toFixed(6)} USDC. Your current debt is ${riskData.currentDebtUSDC.toFixed(6)} USDC, including approximately ${riskData.interestUSDC.toFixed(6)} USDC in accrued interest.`
+    }
+
+    if (q.includes('interest')) {
+      return `Your accrued interest is approximately ${riskData.interestUSDC.toFixed(6)} USDC. Your current debt is ${riskData.currentDebtUSDC.toFixed(6)} USDC. Confirm the repayment amount on the Repay page before submitting a transaction.`
+    }
+
+    if (q.includes('health factor')) {
+      const health = Number.isFinite(riskData.healthFactor)
+        ? riskData.healthFactor.toFixed(2)
+        : 'Not available'
+
+      return `Your reported Health Factor is ${health}. This is a protocol-specific metric; it does not guarantee liquidation safety.`
+    }
+
+    if (
+      q.includes('my ltv') ||
+      q.includes('current ltv') ||
+      q.includes('loan-to-value')
+    ) {
+      return `Your current LTV is ${riskData.ltvPercent.toFixed(2)}%. The configured maximum LTV is 70%, so keeping a buffer below that limit is prudent.`
+    }
+
+   if (
+  q.includes('my eth') ||
+  q.includes('my collateral') ||
+  q.includes('current collateral') ||
+  q.includes('collateral value')
+) {
+      return `Your recorded collateral is ${riskData.collateralETH.toFixed(6)} ETH, valued at $${riskData.collateralUSD.toFixed(2)} according to the latest risk analysis.`
+    }
+
+    return null
+  }
+
+
   function sendMessage(text = input) {
     const question = text.trim()
     if (!question) return
 
-    const answer = getAnswer(question)
+    const answer =
+      getPersonalizedAnswer(question) ?? getAnswer(question)
 
     setMessages((previous) => [
       ...previous,

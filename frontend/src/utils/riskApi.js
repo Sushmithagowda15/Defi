@@ -1,4 +1,4 @@
-const RISK_API_URL = 'http://127.0.0.1:8000'
+const RISK_API_URL = 'http://127.0.0.1:8002'
 
 export async function predictRisk(riskData) {
   try {

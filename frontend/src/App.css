@@ -263,6 +263,26 @@ button {
     0 14px 30px rgba(91, 67, 231, 0.35);
 }
 
+/* Disconnect wallet button */
+
+.wallet-disconnect-btn {
+  height: 54px;
+  padding: 0 18px;
+  border-radius: 13px;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: rgba(127, 29, 29, 0.18);
+  color: #fca5a5;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.wallet-disconnect-btn:hover {
+  background: rgba(127, 29, 29, 0.35);
+  border-color: rgba(248, 113, 113, 0.7);
+}
+
 
 /* =========================================================
    MAIN LAYOUT
@@ -1216,6 +1236,12 @@ textarea:focus {
     padding: 0 17px;
 
     font-size: 13px;
+  }
+
+  .wallet-disconnect-btn {
+    height: 46px;
+    padding: 0 12px;
+    font-size: 12px;
   }
 
   .layout {

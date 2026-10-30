@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   BrowserProvider,
   Contract,
@@ -8,6 +8,7 @@ import {
 } from 'ethers'
 
 import { useWallet } from '../context/WalletContext'
+import { useRisk } from '../context/RiskContext'
 
 import {
   LENDING_POOL_ADDRESS,
@@ -20,6 +21,7 @@ import { predictRisk } from '../utils/riskApi'
 function RiskAnalysis() {
 
   const { walletAddress, walletError } = useWallet()
+  const { setRiskData } = useRisk()
 
   const [collateral, setCollateral] = useState(0)
   const [borrowed, setBorrowed] = useState(0)
@@ -115,7 +117,7 @@ function RiskAnalysis() {
   // Load blockchain + AI risk data
   // =========================================
 
-  const loadRiskData = async (address) => {
+  const loadRiskData = useCallback(async (address, isCurrent = () => true) => {
 
     if (!window.ethereum || !address) {
       return
@@ -141,8 +143,8 @@ function RiskAnalysis() {
     // Read loan
     // -----------------------------------------
 
-    const loan =
-      await lendingPool.loans(address)
+    const loan = await lendingPool.loans(address)
+    if (!isCurrent()) return
 
 
     // -----------------------------------------
@@ -181,6 +183,7 @@ function RiskAnalysis() {
 
     const currentDebtRaw =
       await lendingPool.getCurrentDebt(address)
+      if (!isCurrent()) return
 
 
     const currentDebt =
@@ -202,6 +205,7 @@ function RiskAnalysis() {
 
     const collateralValueRaw =
       await lendingPool.getCollateralValue(address)
+      if (!isCurrent()) return
 
 
     const collateralValue =
@@ -223,6 +227,7 @@ function RiskAnalysis() {
 
     const maxBorrowRaw =
       await lendingPool.getMaxBorrowAmount(address)
+      if (!isCurrent()) return
 
 
     const maxBorrow =
@@ -240,6 +245,7 @@ function RiskAnalysis() {
 
     const healthFactorRaw =
       await lendingPool.getHealthFactor(address)
+      if (!isCurrent()) return
 
 
     let currentHealthFactor
@@ -357,6 +363,7 @@ function RiskAnalysis() {
       collateralAmount <= 0 ||
       currentDebt <= 0
     ) {
+      setRiskData(null)
 
       setRiskScore(null)
       setRiskLevel(
@@ -431,7 +438,7 @@ function RiskAnalysis() {
           collateralValue,
 
         borrowed_usdc:
-          currentDebt,
+          principalBorrowed,
 
         ltv:
           currentLTV / 100,
@@ -454,6 +461,10 @@ function RiskAnalysis() {
             : 10,
 
       })
+
+
+
+      if (!isCurrent()) return
 
 
     // =========================================
@@ -488,62 +499,102 @@ function RiskAnalysis() {
       aiResult.recommendation || ''
     )
 
+    setRiskData({
+      walletAddress: address,
+      riskLevel: aiResult.risk_level,
+      riskScore: aiResult.risk_score,
+      probabilities: aiResult.probabilities || {
+        low: 0,
+        medium: 0,
+        high: 0,
+      },
+      riskFactors: aiResult.risk_factors || [],
+      recommendation: aiResult.recommendation || '',
+      collateralETH: collateralAmount,
+      collateralUSD: collateralValue,
+      principalBorrowedUSDC: principalBorrowed,
+      currentDebtUSDC: currentDebt,
+      interestUSDC: interest,
+      ltvPercent: currentLTV,
+      healthFactor: currentHealthFactor,
+      loanDurationDays: durationDays,
+    })
+
 
     setStatusMessage(
       'AI risk analysis completed successfully.'
     )
 
-  }
+  }, [setRiskData])
 
 
   // =========================================
   // Connect wallet
   // =========================================
 
-    useEffect(() => {
-    if (!walletAddress) {
-      setCollateral(0)
-      setBorrowed(0)
-      setCollateralUSD(0)
-      setLtv(null)
-      setCollateralRatio(null)
-      setHealthFactor(null)
-      setLoanDuration(0)
-      setInterestUSDC(0)
 
-      setRiskScore(null)
-      setRiskLevel('Awaiting Analysis')
+useEffect(() => {
+    let active = true
 
-      setProbabilities({
-        low: null,
-        medium: null,
-        high: null,
-      })
+    // Clear data belonging to the previous wallet.
+    setRiskData(null)
 
-      setRiskFactors([])
-      setRecommendation('')
-      setStatusMessage('')
+    setCollateral(0)
+    setBorrowed(0)
+    setCollateralUSD(0)
 
-      return
-    }
+    setLtv(null)
+    setCollateralRatio(null)
+    setHealthFactor(null)
 
-    const runAnalysis = async () => {
-      try {
-        setLoading(true)
-        setStatusMessage('')
-        await loadRiskData(walletAddress)
-      } catch (error) {
-        console.error('Risk analysis error:', error)
-        setStatusMessage(
-          error?.message || 'Failed to load risk analysis.'
-        )
-      } finally {
-        setLoading(false)
+    setLoanDuration(0)
+    setInterestUSDC(0)
+
+    setRiskScore(null)
+    setRiskLevel('Awaiting Analysis')
+
+    setProbabilities({
+      low: null,
+      medium: null,
+      high: null,
+    })
+
+    setRiskFactors([])
+    setRecommendation('')
+
+    setStatusMessage(
+      walletAddress ? 'Loading blockchain position...' : ''
+    )
+    setLoading(Boolean(walletAddress))
+
+    if (walletAddress) {
+      const runAnalysis = async () => {
+        try {
+          await loadRiskData(walletAddress, () => active)
+        } catch (error) {
+          if (!active) return
+
+          console.error('Risk analysis error:', error)
+
+          setRiskData(null)
+          setStatusMessage(
+            error?.message || 'Failed to load risk analysis.'
+          )
+        } finally {
+          if (active) {
+            setLoading(false)
+          }
+        }
       }
+
+      runAnalysis()
     }
 
-    runAnalysis()
-  }, [walletAddress])
+    return () => {
+      active = false
+    }
+  }, [walletAddress, loadRiskData, setRiskData])
+
 
 
   return (
