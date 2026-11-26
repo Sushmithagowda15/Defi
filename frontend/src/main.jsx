@@ -4,17 +4,20 @@ import { BrowserRouter } from 'react-router-dom'
 
 import './index.css'
 import App from './App.jsx'
+import { AuthProvider } from './context/AuthContext.jsx'
 import { WalletProvider } from './context/WalletContext.jsx'
 import { RiskProvider } from './context/RiskContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <WalletProvider>
-        <RiskProvider>
-          <App />
-        </RiskProvider>
-      </WalletProvider>
+      <AuthProvider>
+        <WalletProvider>
+          <RiskProvider>
+            <App />
+          </RiskProvider>
+        </WalletProvider>
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>,
 )

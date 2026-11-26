@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from 'react'
 import { connectWallet } from '../blockchain/web3'
 
@@ -6,6 +5,7 @@ const WalletContext = createContext(null)
 
 export function WalletProvider({ children }) {
   const [walletAddress, setWalletAddress] = useState('')
+  const [walletBalance, setWalletBalance] = useState('')
   const [walletError, setWalletError] = useState('')
 
   useEffect(() => {
@@ -15,6 +15,7 @@ export function WalletProvider({ children }) {
 
     const handleAccountsChanged = (accounts) => {
       setWalletAddress(accounts?.[0] || '')
+      setWalletBalance('')
       setWalletError('')
     }
 
@@ -35,6 +36,7 @@ export function WalletProvider({ children }) {
       const wallet = await connectWallet()
 
       setWalletAddress(wallet.address)
+      setWalletBalance(wallet.balance)
 
       return wallet
     } catch (error) {
@@ -46,6 +48,7 @@ export function WalletProvider({ children }) {
 
   const disconnectWallet = () => {
     setWalletAddress('')
+    setWalletBalance('')
     setWalletError('')
   }
 
@@ -53,6 +56,7 @@ export function WalletProvider({ children }) {
     <WalletContext.Provider
       value={{
         walletAddress,
+        walletBalance,
         walletError,
         connectWallet: handleConnectWallet,
         disconnectWallet,
