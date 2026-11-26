@@ -1,0 +1,104 @@
+/* Scoped styles for Email Verification page */
+.verify-email-status-card {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 0;
+}
+
+.verify-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.verify-icon-wrapper.success {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  box-shadow: 0 0 24px rgba(34, 197, 94, 0.2);
+}
+
+.verify-icon-wrapper.error {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.2);
+}
+
+.verify-icon-wrapper.loading {
+  background: rgba(105, 85, 255, 0.15);
+  border: 1px solid rgba(105, 85, 255, 0.35);
+}
+
+.verify-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(105, 85, 255, 0.3);
+  border-top-color: #a78bfa;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.verify-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #f5f7ff;
+  margin: 0;
+}
+
+.verify-description {
+  font-size: 14px;
+  color: #94a3b8;
+  line-height: 1.6;
+  max-width: 360px;
+  margin: 0;
+}
+
+.verify-resend-section {
+  width: 100%;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #1c2235;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.verify-resend-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.verify-action-btn {
+  width: 100%;
+  height: 48px;
+  margin-top: 8px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #6b56f4 0%, #5842df 100%);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: 0 10px 25px rgba(91, 67, 231, 0.28);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.verify-action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 30px rgba(91, 67, 231, 0.38);
+}
